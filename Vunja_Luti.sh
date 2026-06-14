@@ -265,7 +265,7 @@ banner() {
 
     # ═══════════════════════════════════════════════════════════════
     #  VUNJA LUTI — Tor Proxy + IP Rotator v4.0
-    #  Author : archnexus_707   |   Donations welcome
+    #  Author : archnexus707   |   Donations welcome
     # ═══════════════════════════════════════════════════════════════
 
     echo ""
@@ -302,7 +302,7 @@ banner() {
     printf "  ${C_ACCENT}│${R}  %-15s %b%-30s%b ${C_ACCENT}│${R}\n" "Exit Nodes" "$C_PEACH" "${EXIT_FILTER:-any}" "$R"
     echo -e "  ${C_ACCENT}└──────────────────────────────────────────────┘${R}"
     echo ""
-    echo -e "  ${C_DIM}Author : archnexus_707  |  Donations welcome${R}"
+    echo -e "  ${C_DIM}Author : archnexus707  |  Donations welcome${R}"
     echo ""
 }
 

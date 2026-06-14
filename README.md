@@ -170,9 +170,9 @@ VUNJA-LUTI/
 
 ## 👤 Author
 
-**archnexus_707** — solo developer, privacy advocate, terminal enthusiast.
+**archnexus707** — solo developer, privacy advocate, terminal enthusiast.
 
-> 💰 **Donations welcome:** `archnexus_707`
+> 💰 **Donations welcome:** `archnexus707`
 
 ---
 

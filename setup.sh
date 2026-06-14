@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #==============================================================================
 #   VUNJA LUTI — Setup & Dependency Installer
-#   Author : archnexus_707
-#   Donate : archnexus_707
+#   Author : archnexus707
+#   Donate : archnexus707
 #==============================================================================
 set -e
 
@@ -20,7 +20,7 @@ banner() {
     echo -e "${MAUVE}          ▀▀▀▀      ▀▀▀▀    ▀▀   ▀▀▀   ▀▀▀▀▀    ▀▀    ▀▀    ${R}"
     echo ""
     echo -e "  ${DIM}VUNJA LUTI — Dependency Setup${R}"
-    echo -e "  ${DIM}Author: archnexus_707  |  Donations welcome${R}"
+    echo -e "  ${DIM}Author: archnexus707  |  Donations welcome${R}"
     echo ""
 }
 
@@ -223,7 +223,7 @@ summary() {
     echo -e "  ${DIM}To start:${R}    ${MAUVE}./Vunja_Luti.sh start${R}"
     echo -e "  ${DIM}Or via alias:${R} ${MAUVE}vl start${R} ${DIM}(reload terminal first)${R}"
     echo ""
-    echo -e "  ${DIM}Author : archnexus_707  |  Donations welcome${R}"
+    echo -e "  ${DIM}Author : archnexus707  |  Donations welcome${R}"
     echo ""
 }
 
