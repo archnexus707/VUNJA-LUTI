@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/cyber_realm.png" alt="Cyberpunk Dark City" width="100%">
+  <img src="assets/neon_pulse.webp" alt="Neon Pulse — Animated" width="100%">
 </p>
 
 <h1 align="center">⚡ VUNJA LUTI ⚡</h1>
@@ -13,9 +13,9 @@
 </p>
 
 <p align="center">
-  <img src="assets/neon_ghost.png" width="45%" alt="Neon Ghost">
+  <img src="assets/circuit_glitch.webp" width="45%" alt="Circuit Glitch — Animated">
   &nbsp;&nbsp;
-  <img src="assets/dark_routes.png" width="45%" alt="Dark Routes">
+  <img src="assets/ghost_proxy.jpg" width="45%" alt="Ghost Proxy">
 </p>
 
 ---
