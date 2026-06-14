@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/banner_cyber.jpg" alt="VUNJA LUTI Banner" width="100%">
+  <img src="assets/banner_cyber.jpg" alt="Cyberpunk City" width="100%">
 </p>
 
 <h1 align="center">⚡ VUNJA LUTI ⚡</h1>
@@ -13,9 +13,9 @@
 </p>
 
 <p align="center">
-  <img src="assets/banner_privacy.jpg" width="45%">
+  <img src="assets/banner_privacy.jpg" width="45%" alt="Privacy">
   &nbsp;&nbsp;
-  <img src="assets/banner_network.jpg" width="45%">
+  <img src="assets/banner_network.jpg" width="45%" alt="Network">
 </p>
 
 ---
