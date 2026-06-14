@@ -175,7 +175,9 @@ VUNJA-LUTI/
 > 💀 Donations: archnexus707@gmail.com
 
 <p align="center">
-  <img src="assets/anime_dance.gif" width="120" alt="Dance">
+  <sub>╔══════════════════════════════════╗</sub><br>
+  <sub>║  ⌐(ツ)¬  Thanks for stopping by  ║</sub><br>
+  <sub>╚══════════════════════════════════╝</sub>
 </p>
 
 ---
