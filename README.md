@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/neon_city.webp" alt="Neon City — Animated Custom Art" width="100%">
+  <img src="assets/neon_realm.webp" alt="Neon Realm — Animated 4K Cyberpunk" width="100%">
 </p>
 
 <h1 align="center">⚡ VUNJA LUTI ⚡</h1>
@@ -13,9 +13,9 @@
 </p>
 
 <p align="center">
-  <img src="assets/dark_circuit.png" width="45%" alt="Dark Circuit">
+  <img src="assets/ghost_proxy.png" width="45%" alt="Ghost Proxy — Terminal + Hood">
   &nbsp;&nbsp;
-  <img src="assets/ghost_proxy.png" width="45%" alt="Ghost Proxy">
+  <img src="assets/dark_circuit.png" width="45%" alt="Dark Circuit — Tor Network">
 </p>
 
 ---
