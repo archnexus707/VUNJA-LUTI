@@ -172,7 +172,11 @@ VUNJA-LUTI/
 
 **archnexus707** — solo developer, privacy advocate, terminal enthusiast.
 
-> 💰 **Donations: archnexus707@gmail.com:** `archnexus707`
+> 💀 Donations: archnexus707@gmail.com
+
+<p align="center">
+  <img src="assets/anime_dance.gif" width="120" alt="Dance">
+</p>
 
 ---
 
