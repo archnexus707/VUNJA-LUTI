@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/neon_pulse.webp" alt="Neon Pulse — Animated" width="100%">
+  <img src="assets/neon_city.webp" alt="Neon City — Animated Custom Art" width="100%">
 </p>
 
 <h1 align="center">⚡ VUNJA LUTI ⚡</h1>
@@ -13,9 +13,9 @@
 </p>
 
 <p align="center">
-  <img src="assets/circuit_glitch.webp" width="45%" alt="Circuit Glitch — Animated">
+  <img src="assets/dark_circuit.png" width="45%" alt="Dark Circuit">
   &nbsp;&nbsp;
-  <img src="assets/ghost_proxy.jpg" width="45%" alt="Ghost Proxy">
+  <img src="assets/ghost_proxy.png" width="45%" alt="Ghost Proxy">
 </p>
 
 ---
