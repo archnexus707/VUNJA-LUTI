@@ -20,7 +20,7 @@ banner() {
     echo -e "${MAUVE}          ▀▀▀▀      ▀▀▀▀    ▀▀   ▀▀▀   ▀▀▀▀▀    ▀▀    ▀▀    ${R}"
     echo ""
     echo -e "  ${DIM}VUNJA LUTI — Dependency Setup${R}"
-    echo -e "  ${DIM}Author: archnexus707  |  Donations welcome${R}"
+    echo -e "  ${DIM}Author: archnexus707  |  Donations: archnexus707@gmail.com${R}"
     echo ""
 }
 
@@ -223,7 +223,7 @@ summary() {
     echo -e "  ${DIM}To start:${R}    ${MAUVE}./Vunja_Luti.sh start${R}"
     echo -e "  ${DIM}Or via alias:${R} ${MAUVE}vl start${R} ${DIM}(reload terminal first)${R}"
     echo ""
-    echo -e "  ${DIM}Author : archnexus707  |  Donations welcome${R}"
+    echo -e "  ${DIM}Author : archnexus707  |  Donations: archnexus707@gmail.com${R}"
     echo ""
 }
 
