@@ -172,7 +172,11 @@ VUNJA-LUTI/
 
 **archnexus707** — solo developer, privacy advocate, terminal enthusiast.
 
-> 💀 Donations: archnexus707@gmail.com
+## ☕ Support
+
+If Vunja Luti helps you stay anonymous, consider buying me a coffee:
+
+[![](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-archnexus707@gmail.com-yellow?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](mailto:archnexus707@gmail.com)
 
 <p align="center">
   <sub>╔══════════════════════════════════╗</sub><br>
