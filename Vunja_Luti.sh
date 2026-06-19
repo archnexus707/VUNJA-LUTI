@@ -11,14 +11,25 @@
 set +e
 
 TORN_DIR="$(cd "$(dirname "$0")" && pwd)/tornet"
-if [ ! -d "$TORN_DIR/tornet" ]; then
-    echo -e "\033[38;5;196m[FATAL] tornet module not found at: $TORN_DIR/tornet\033[0m"
-    echo -e "\033[2mClone it: git clone https://github.com/AnonC0D3/tornet.git \"$TORN_DIR\"\033[0m"
-    exit 1
-fi
-if [ ! -f "$TORN_DIR/tornet/tornet.py" ]; then
-    echo -e "\033[38;5;196m[FATAL] tornet.py not found — tornet directory incomplete\033[0m"
-    exit 1
+
+# Allow --help and --version without tornet installed
+for _arg in "$@"; do
+    case "$_arg" in
+        --help|-h|help|--version) ;;
+        *) continue ;;
+    esac
+    # If we reach here, it's a help/version flag — skip tornet check
+    _SKIP_TORNET=1
+    break
+done
+
+if [ "${_SKIP_TORNET:-0}" -eq 0 ]; then
+    if [ ! -d "$TORN_DIR/tornet" ] || [ ! -f "$TORN_DIR/tornet/tornet.py" ]; then
+        echo -e "\033[38;5;196m[FATAL] tornet module not found at: $TORN_DIR/tornet\033[0m"
+        echo -e "\033[2mFix: git clone https://github.com/ayadseghairi/tornet.git \"$TORN_DIR\"\033[0m"
+        echo -e "\033[2mOr run: ./setup.sh\033[0m"
+        exit 1
+    fi
 fi
 CONFIG_DIR="${HOME}/.config/vl"
 mkdir -p "$CONFIG_DIR"
@@ -659,7 +670,8 @@ try:
         echo -e "  Tor: ${tor_status}"
         local ip=$(py "print(get_current_ip() or '???')")
         echo -e "  Exit: ${C_HI}${ip}${R}  $(geo_flag "$ip")"
-        echo -e "  KS: ${KILLSWITCH:+${C_GOOD}⚡ ON}${KILLSWITCH:-${C_DIM}OFF}${R}  Filter: ${EXIT_FILTER:-any}"
+        local _ks="${C_DIM}OFF"; [ "$KILLSWITCH" -eq 1 ] 2>/dev/null && _ks="${C_GOOD}⚡ ON"
+        echo -e "  KS: ${_ks}${R}  Filter: ${EXIT_FILTER:-any}"
         sleep 3
     done
 }
@@ -744,14 +756,19 @@ cmd_status() {
     
     banner
     echo ""
+    local ks_display="${C_DIM}○ disarmed${R}"
+    [ "$KILLSWITCH" -eq 1 ] 2>/dev/null && ks_display="${C_GOOD}⚡ ENGAGED${R}"
+    local br_display="${C_DIM}none${R}"
+    [ "$BRIDGE_MODE" -eq 1 ] 2>/dev/null && br_display="${C_GOOD}obfs4 active${R}"
+
     echo -e "  ${C_ACCENT}╭──  STATUS  ──────────────────────────────────────────╮${R}"
     printf  "  ${C_ACCENT}│${R}  Tor:        %b  ${C_ACCENT}│${R}\n" "$tor_status"
     printf  "  ${C_ACCENT}│${R}  Exit IP:    ${C_BOLD}%s${R}  %s  ${C_ACCENT}│${R}\n" "$ip" "$flag"
     printf  "  ${C_ACCENT}│${R}  Latency:    %s  ${C_GOOD}%sms${R}  ${C_ACCENT}│${R}\n" "$qi" "$ms"
     printf  "  ${C_ACCENT}│${R}  SOCKS5:     ${C_TEAL}127.0.0.1:9050${R}  ${C_ACCENT}│${R}\n"
-    printf  "  ${C_ACCENT}│${R}  Killswitch: ${KILLSWITCH:+${C_GOOD}⚡ ENGAGED}${KILLSWITCH:-${C_DIM}○ disarmed}${R}  ${C_ACCENT}│${R}\n"
-    printf  "  ${C_ACCENT}│${R}  Exit Nodes: ${C_PEACH}${EXIT_FILTER:-any}${R}  ${C_ACCENT}│${R}\n"
-    printf  "  ${C_ACCENT}│${R}  Bridges:    ${BRIDGE_MODE:+${C_GOOD}obfs4 active}${BRIDGE_MODE:-${C_DIM}none}${R}  ${C_ACCENT}│${R}\n"
+    echo -e "  ${C_ACCENT}│${R}  Killswitch: ${ks_display}  ${C_ACCENT}│${R}"
+    echo -e "  ${C_ACCENT}│${R}  Exit Nodes: ${C_PEACH}${EXIT_FILTER:-any}${R}  ${C_ACCENT}│${R}"
+    echo -e "  ${C_ACCENT}│${R}  Bridges:    ${br_display}  ${C_ACCENT}│${R}"
     echo -e "  ${C_ACCENT}╰──────────────────────────────────────────────────────╯${R}"
     echo ""
     show_circuit
@@ -831,10 +848,15 @@ cmd_wrap() {
     local interval="${ROTATE_INTERVAL:-60}"
     local rotate_pid=""
 
-    if [ "$interval" -gt 0 ]; then
-        (while true; do sleep "$interval"; py "change_ip()" 2>/dev/null; done) &
+    if [ "$interval" -gt 0 ] && ss -tln 2>/dev/null | grep -q '127.0.0.1:9050'; then
+        (while true; do sleep "$interval"; timeout 10 python3 -c "
+import sys; sys.path.insert(0,'$TORN_DIR')
+from tornet.tornet import change_ip; change_ip()
+" 2>/dev/null || true; done) &
         rotate_pid=$!
         say "IP rotation active (every ${interval}s) — PID ${rotate_pid}"
+    elif [ "$interval" -gt 0 ]; then
+        echo -e "  ${C_WARN}◇${R} Tor not running — rotation disabled (start Tor first)"
     fi
 
     echo -e "  ${C_ACCENT}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${R}"
