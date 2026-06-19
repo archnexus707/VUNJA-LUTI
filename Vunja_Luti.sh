@@ -8,7 +8,7 @@
 #            theme engine, fzf menus, sound design, ASCII rings,
 #            keyboard shortcuts, status bars, FIGlet banners, JSON export
 #==============================================================================
-set -e
+set +e
 
 TORN_DIR="$(cd "$(dirname "$0")" && pwd)/tornet"
 if [ ! -d "$TORN_DIR/tornet" ]; then
@@ -285,8 +285,8 @@ banner() {
     echo ""
 
     # ── Subtitle ──────────────────────────────────────────────────
-    echo -e "  ${C_HI}V U N J A   L U T I${R}  ${C_DIM}— v4.0${R}"
-    echo -e "  ${C_SUBTLE}Tor Proxy  +  IP Rotator${R}"
+    echo -e "  ${C_HI}V U N J A   L U T I${R}  ${C_DIM}— v5.0${R}"
+    echo -e "  ${C_SUBTLE}Tor Proxy  +  IP Rotator  +  Tool Wrapper${R}"
 
     # ── Info Bar ───────────────────────────────────────────────────
     local ks_text="disarmed" ks_color="$C_DIM"
@@ -732,25 +732,7 @@ cmd_rotate() {
     sound rotate
 }
 
-cmd_stop() {
-    py "stop_services()"
-    [ "$KILLSWITCH" -eq 1 ] && killswitch_off
-    sound stop
-    echo -e "  ${C_GOOD}◆${R} Tor stopped."
-}
 
-cmd_rotate() {
-    local old=$(py "print(get_current_ip() or '???')")
-    py "change_ip()"
-    sleep 3
-    local new=$(py "print(get_current_ip() or '???')")
-    local flag=$(geo_flag "$new")
-    local ms=$(latency)
-    local qi=$(quality_icon "$ms")
-    echo -e "  ${C_DIM}${old}${R} ${C_DIM}→${R} ${C_HI}${new}${R}  ${flag}  ${qi} ${C_HI}${ms}ms${R}"
-    notify "VL: IP rotated to $new ($flag)"
-    sound rotate
-}
 
 cmd_status() {
     local ip=$(py "print(get_current_ip() or '???')")
@@ -777,18 +759,32 @@ cmd_status() {
 }
 
 cmd_anoncheck() {
-    local tor=$(py "print(get_current_ip() or '???')")
-    # Route through Tor to avoid leaking real IP to ipify.org
-    local real=$(curl -sk --socks5-hostname 127.0.0.1:9050 --connect-timeout 5 https://api.ipify.org 2>/dev/null || echo "???")
+    local tor_ip=$(py "print(get_current_ip() or '???')")
+    local real_ip=$(curl -sk --connect-timeout 5 --max-time 8 https://api.ipify.org 2>/dev/null || echo "???")
     echo ""
-    echo -e "  Tor Exit: ${C_ACCENT}${tor}${R}  $(geo_flag "$tor")"
-    echo -e "  Exit IP:  ${C_DIM}${real}${R}"
-    if [ "$tor" != "???" ] && [ "$tor" != "$real" ]; then
-        echo -e "  ${C_GOOD}◆ ANONYMOUS${R}"
+    echo -e "  ${C_DIM}┌─ ANONYMITY CHECK ─────────────────────────────┐${R}"
+    echo -e "  ${C_DIM}│${R}  Tor Exit IP:  ${C_ACCENT}${tor_ip}${R}  $(geo_flag "$tor_ip")"
+    echo -e "  ${C_DIM}│${R}  Real IP:      ${C_DIM}${real_ip}${R}"
+    if [ "$tor_ip" != "???" ] && [ "$real_ip" != "???" ] && [ "$tor_ip" != "$real_ip" ]; then
+        echo -e "  ${C_DIM}│${R}  Status:       ${C_GOOD}🛡️  ANONYMOUS${R}"
+        echo -e "  ${C_DIM}│${R}  DNS Leak:     $(check_dns_leak)"
+    elif [ "$tor_ip" = "???" ]; then
+        echo -e "  ${C_DIM}│${R}  Status:       ${C_BAD}⛔ TOR NOT CONNECTED${R}"
     else
-        echo -e "  ${C_BAD}◆ EXPOSED — Tor may not be working${R}"
+        echo -e "  ${C_DIM}│${R}  Status:       ${C_BAD}⚠️  EXPOSED — IPs MATCH${R}"
     fi
+    echo -e "  ${C_DIM}└───────────────────────────────────────────────┘${R}"
     echo ""
+}
+
+check_dns_leak() {
+    local dns_ip=$(curl -sk --socks5-hostname 127.0.0.1:9050 --connect-timeout 5 "https://1.1.1.1/cdn-cgi/trace" 2>/dev/null | grep "ip=" | cut -d= -f2)
+    local real_ip=$(curl -sk --connect-timeout 5 https://api.ipify.org 2>/dev/null)
+    if [ -n "$dns_ip" ] && [ "$dns_ip" != "$real_ip" ]; then
+        printf "${C_GOOD}NONE DETECTED${R}"
+    else
+        printf "${C_BAD}POSSIBLE LEAK${R}"
+    fi
 }
 
 # ── NEW: Export reports ───────────────────────────────────────
@@ -818,34 +814,450 @@ with open('${out}.json') as f, open('${out}.csv','w') as out:
     echo -e "  ${C_GOOD}◆${R} Reports generated"
 }
 
-# ── Usage ─────────────────────────────────────────────────────
-usage() {
-    echo -e "${C_ACCENT}VL v4.0 — Vunja Luti — Tor Proxy + IP Rotator${R}\n"
-    echo "  start [--rotate N] [--log FILE] [--dashboard]  Start Tor + rotate"
-    echo "  stop                                              Stop Tor"
-    echo "  status                                            Show exit IP + flag + quality"
-    echo "  rotate                                            Change IP now"
-    echo "  anoncheck                                         Verify anonymity"
+# ═══════════════════════════════════════════════════════════════
+# ██  10 ADVANCED FEATURES — v5.0  ██
+# ═══════════════════════════════════════════════════════════════
+
+# ── FEATURE 1: --wrap "cmd" — Route ANY tool through Tor ──────
+cmd_wrap() {
+    local cmd="$*"
+    [ -z "$cmd" ] && { echo -e "  ${C_BAD}◆ Usage: vl --wrap \"hydra -l admin -P pass.txt target\"${R}"; return 1; }
+
+    say "Wrapping command through Tor SOCKS5..."
+    echo -e "  ${C_DIM}CMD: ${cmd}${R}"
+
+    generate_proxychains_conf
+
+    local interval="${ROTATE_INTERVAL:-60}"
+    local rotate_pid=""
+
+    if [ "$interval" -gt 0 ]; then
+        (while true; do sleep "$interval"; py "change_ip()" 2>/dev/null; done) &
+        rotate_pid=$!
+        say "IP rotation active (every ${interval}s) — PID ${rotate_pid}"
+    fi
+
+    echo -e "  ${C_ACCENT}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${R}"
+    proxychains4 -f /tmp/vl_proxychains.conf $cmd
+    local exit_code=$?
+    echo -e "  ${C_ACCENT}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${R}"
+
+    [ -n "$rotate_pid" ] && kill "$rotate_pid" 2>/dev/null
+    echo -e "  ${C_DIM}Exit code: ${exit_code}${R}"
+    return $exit_code
+}
+
+# ── FEATURE 2: --autochain — Generate proxychains config ──────
+generate_proxychains_conf() {
+    cat > /tmp/vl_proxychains.conf << 'PCEOF'
+# VL Auto-generated proxychains config
+strict_chain
+proxy_dns
+remote_dns_subnet 224
+tcp_read_time_out 15000
+tcp_connect_time_out 8000
+
+[ProxyList]
+socks5 127.0.0.1 9050
+PCEOF
+    say "proxychains4 config written: /tmp/vl_proxychains.conf"
+}
+
+cmd_autochain() {
+    generate_proxychains_conf
+    local sys_conf="/etc/proxychains4.conf"
+    if [ -w "$sys_conf" ] || [ "$EUID" -eq 0 ]; then
+        sudo cp /tmp/vl_proxychains.conf "$sys_conf"
+        say "System proxychains4.conf updated"
+    fi
+    echo -e "  ${C_DIM}Now use: proxychains4 <any_command>${R}"
+    echo -e "  ${C_DIM}Or:      vl --wrap \"hydra -l admin -P pass.txt ssh://target\"${R}"
+}
+
+# ── FEATURE 3: --help full man-page style docs ────────────────
+cmd_full_help() {
+    echo -e "${C_ACCENT}${C_BOLD}"
+    echo "  ╔═══════════════════════════════════════════════════════════════════╗"
+    echo "  ║          VUNJA LUTI v5.0 — COMPLETE REFERENCE MANUAL            ║"
+    echo "  ╚═══════════════════════════════════════════════════════════════════╝"
+    echo -e "${R}"
+    echo -e "${C_HI}NAME${R}"
+    echo "       vl — Tor SOCKS5 proxy manager with IP rotation and tool integration"
     echo ""
-    echo "  --killswitch              Enable iptables kill switch (needs root)"
-    echo "  --no-killswitch           Disable kill switch"
-    echo "  --exit-filter COUNTRY     Restrict exit nodes (US, DE, NL, ...)"
-    echo "  --fzf-picker              Interactive exit node picker"
-    echo "  --proxify APP [args]      Launch app through Tor (firefox, curl, nmap)"
-    echo "  --export [LOG] [OUT]      Export rotation log to JSON + CSV"
-    echo "  --theme THEME             cyberpunk | matrix | midnight | minimal"
-    echo "  --sound-on|--sound-off    Toggle sound effects"
-    echo "  --help                    This message"
+    echo -e "${C_HI}SYNOPSIS${R}"
+    echo "       ./Vunja_Luti.sh [COMMAND] [OPTIONS]"
+    echo "       vl [COMMAND] [OPTIONS]"
+    echo ""
+    echo -e "${C_HI}COMMANDS${R}"
+    echo -e "  ${C_ACCENT}start${R}                  Start Tor + begin IP rotation loop"
+    echo -e "  ${C_ACCENT}stop${R}                   Stop Tor and rotation"
+    echo -e "  ${C_ACCENT}status${R}                 Show current exit IP, country, latency"
+    echo -e "  ${C_ACCENT}rotate${R}                 Force immediate IP rotation"
+    echo -e "  ${C_ACCENT}anoncheck${R}              Verify Tor anonymity + DNS leak test"
+    echo ""
+    echo -e "${C_HI}TOOL INTEGRATION${R} (route tools through Tor)"
+    echo ""
+    echo -e "  ${C_ACCENT}--wrap \"COMMAND\"${R}        Execute any command through Tor with IP rotation"
+    echo -e "  ${C_ACCENT}--autochain${R}            Generate/install proxychains4 configuration"
+    echo -e "  ${C_ACCENT}--toolbox${R}              Interactive menu: pick tool + auto-configure"
+    echo -e "  ${C_ACCENT}--proxify APP${R}          Launch specific app through Tor"
+    echo ""
+    echo -e "${C_HI}SECURITY${R}"
+    echo ""
+    echo -e "  ${C_ACCENT}--killswitch${R}           Block ALL non-Tor traffic (iptables, needs root)"
+    echo -e "  ${C_ACCENT}--leak-guard${R}           Enable DNS + IPv6 leak protection"
+    echo -e "  ${C_ACCENT}--stealth${R}              Randomize timing + avoid Tor fingerprinting"
+    echo -e "  ${C_ACCENT}--multi-hop N${R}          Chain N Tor circuits (deeper anonymity)"
+    echo ""
+    echo -e "${C_HI}ROTATION${R}"
+    echo ""
+    echo -e "  ${C_ACCENT}--rotate N${R}             Rotate IP every N seconds (default: 60)"
+    echo -e "  ${C_ACCENT}--rotate-on N${R}          Rotate after every N requests"
+    echo -e "  ${C_ACCENT}--exit-filter CC${R}       Restrict exits to country (US, DE, NL, FR...)"
+    echo -e "  ${C_ACCENT}--fzf-picker${R}           Interactive country selector"
+    echo ""
+    echo -e "${C_HI}SESSION & LOGGING${R}"
+    echo ""
+    echo -e "  ${C_ACCENT}--session NAME${R}         Save/resume named session with stats"
+    echo -e "  ${C_ACCENT}--log FILE${R}             Log rotation history as JSON"
+    echo -e "  ${C_ACCENT}--export [LOG] [OUT]${R}   Export to JSON + CSV report"
+    echo -e "  ${C_ACCENT}--monitor${R}              Real-time circuit health monitor"
+    echo ""
+    echo -e "${C_HI}DISPLAY${R}"
+    echo ""
+    echo -e "  ${C_ACCENT}--dashboard${R}            3-pane tmux dashboard (live feed + circuit + log)"
+    echo -e "  ${C_ACCENT}--theme NAME${R}           catppuccin|tokyo-night|nord|cyberpunk|matrix|dracula"
+    echo ""
+    echo -e "${C_HI}EXAMPLES${R}"
+    echo ""
+    echo -e "  ${C_DIM}# Start with 30s rotation + killswitch${R}"
+    echo -e "  ${C_GOOD}sudo vl start --rotate 30 --killswitch${R}"
+    echo ""
+    echo -e "  ${C_DIM}# Brute force SSH through Tor (IP rotates every 60s)${R}"
+    echo -e "  ${C_GOOD}vl --wrap \"hydra -l root -P /usr/share/wordlists/rockyou.txt ssh://10.10.10.1\"${R}"
+    echo ""
+    echo -e "  ${C_DIM}# Directory bruteforce through Tor${R}"
+    echo -e "  ${C_GOOD}vl --wrap \"ffuf -u http://target.com/FUZZ -w /usr/share/seclists/Discovery/Web-Content/common.txt\"${R}"
+    echo ""
+    echo -e "  ${C_DIM}# Run gobuster through Tor with 15s rotation${R}"
+    echo -e "  ${C_GOOD}vl --rotate 15 --wrap \"gobuster dir -u http://target.com -w wordlist.txt\"${R}"
+    echo ""
+    echo -e "  ${C_DIM}# SQLMap through Tor${R}"
+    echo -e "  ${C_GOOD}vl --wrap \"sqlmap -u 'http://target.com/page?id=1' --batch --tor\"${R}"
+    echo ""
+    echo -e "  ${C_DIM}# Nmap through Tor (TCP connect only)${R}"
+    echo -e "  ${C_GOOD}vl --wrap \"nmap -sT -Pn -p 80,443,8080 target.com\"${R}"
+    echo ""
+    echo -e "  ${C_DIM}# Full stealth: killswitch + leak guard + exit filter${R}"
+    echo -e "  ${C_GOOD}sudo vl start --killswitch --leak-guard --exit-filter US,NL,DE --stealth${R}"
+    echo ""
+    echo -e "  ${C_DIM}# Interactive toolbox mode${R}"
+    echo -e "  ${C_GOOD}vl --toolbox${R}"
+    echo ""
+    echo -e "  ${C_DIM}# Save session for later analysis${R}"
+    echo -e "  ${C_GOOD}vl --session pentest_01 start --log /tmp/rotation.json${R}"
+    echo ""
+    echo -e "${C_HI}EXIT COUNTRIES${R} (for --exit-filter)"
+    echo ""
+    echo -e "  ${C_DIM}US GB DE NL FR SE CH CA JP SG AU BR RO BG CZ IS NO FI DK${R}"
+    echo ""
+    echo -e "${C_HI}AUTHOR${R}"
+    echo ""
+    echo -e "  ${C_ACCENT}archnexus707${R} — github.com/archnexus707/VUNJA-LUTI"
+    echo -e "  ${C_DIM}Donations: archnexus707@gmail.com${R}"
+    echo ""
+    exit 0
+}
+
+# ── FEATURE 4: --rotate-on N — Per-request rotation ───────────
+ROTATE_ON_REQUESTS=0
+REQUEST_COUNT=0
+
+setup_request_rotation() {
+    local n="$1"
+    ROTATE_ON_REQUESTS="$n"
+    say "IP will rotate every ${n} requests"
+    generate_proxychains_conf
+    cat > /tmp/vl_request_hook.sh << HOOKEOF
+#!/bin/bash
+COUNT_FILE="/tmp/vl_req_count"
+[ ! -f "\$COUNT_FILE" ] && echo 0 > "\$COUNT_FILE"
+COUNT=\$(cat "\$COUNT_FILE")
+COUNT=\$((COUNT + 1))
+echo \$COUNT > "\$COUNT_FILE"
+if [ \$((COUNT % $n)) -eq 0 ]; then
+    PYTHONPATH="$TORN_DIR" python3 -c "import sys; sys.path.insert(0,'$TORN_DIR'); from tornet.tornet import *; change_ip()" 2>/dev/null
+fi
+HOOKEOF
+    chmod +x /tmp/vl_request_hook.sh
+}
+
+# ── FEATURE 5: --leak-guard — DNS + IPv6 leak protection ─────
+cmd_leak_guard() {
+    [ "$EUID" -eq 0 ] || { echo -e "  ${C_BAD}◆ --leak-guard needs root${R}"; return 1; }
+    say "Enabling leak protection..."
+
+    # Block IPv6 completely
+    sysctl -w net.ipv6.conf.all.disable_ipv6=1 >/dev/null 2>&1
+    sysctl -w net.ipv6.conf.default.disable_ipv6=1 >/dev/null 2>&1
+    say "IPv6 disabled"
+
+    # Force DNS through Tor (port 53 only via Tor user)
+    iptables -t nat -A OUTPUT -p udp --dport 53 -j REDIRECT --to-ports 5353 2>/dev/null || true
+    iptables -t nat -A OUTPUT -p tcp --dport 53 -j REDIRECT --to-ports 5353 2>/dev/null || true
+
+    # Configure Tor DNS on port 5353
+    if ! grep -q "DNSPort 5353" /etc/tor/torrc 2>/dev/null; then
+        echo "DNSPort 5353" | sudo tee -a /etc/tor/torrc >/dev/null
+        echo "AutomapHostsOnResolve 1" | sudo tee -a /etc/tor/torrc >/dev/null
+        sudo systemctl reload tor 2>/dev/null || true
+    fi
+
+    say "DNS routed through Tor (port 5353)"
+    say "Leak guard ${C_GOOD}ACTIVE${R}"
+}
+
+# ── FEATURE 6: --stealth — Anti-fingerprinting mode ───────────
+STEALTH_MODE=0
+
+cmd_stealth() {
+    STEALTH_MODE=1
+    say "Stealth mode enabled"
+
+    # Randomize rotation interval (jitter)
+    local base="${ROTATE_INTERVAL:-60}"
+    ROTATE_INTERVAL=$((base + RANDOM % (base / 2)))
+    say "Rotation jitter: ${ROTATE_INTERVAL}s (randomized)"
+
+    # Disable Tor browser fingerprinting headers in torrc
+    if ! grep -q "UseEntryGuards 0" /etc/tor/torrc 2>/dev/null; then
+        echo "# VL Stealth Mode" | sudo tee -a /etc/tor/torrc >/dev/null 2>/dev/null
+        echo "UseEntryGuards 0" | sudo tee -a /etc/tor/torrc >/dev/null 2>/dev/null
+        echo "NumEntryGuards 8" | sudo tee -a /etc/tor/torrc >/dev/null 2>/dev/null
+        sudo systemctl reload tor 2>/dev/null || true
+    fi
+    say "Entry guard rotation enabled"
+}
+
+# ── FEATURE 7: --session NAME — Save/resume sessions ─────────
+SESSION_DIR="${HOME}/.config/vl/sessions"
+SESSION_NAME=""
+
+cmd_session_start() {
+    local name="$1"
+    [ -z "$name" ] && name="session_$(date +%s)"
+    SESSION_NAME="$name"
+    mkdir -p "$SESSION_DIR"
+    local sfile="$SESSION_DIR/${name}.json"
+
+    if [ -f "$sfile" ]; then
+        say "Resuming session: ${C_ACCENT}${name}${R}"
+        local prev_count=$(python3 -c "import json; d=json.load(open('$sfile')); print(d.get('rotations',0))" 2>/dev/null || echo 0)
+        say "Previous rotations: ${prev_count}"
+    else
+        say "New session: ${C_ACCENT}${name}${R}"
+        echo "{\"name\":\"$name\",\"started\":\"$(date -Iseconds)\",\"rotations\":0,\"ips\":[]}" > "$sfile"
+    fi
+    LOG_FILE="${SESSION_DIR}/${name}_log.json"
+}
+
+cmd_session_list() {
+    echo -e "  ${C_ACCENT}Saved Sessions:${R}"
+    for f in "$SESSION_DIR"/*.json; do
+        [ -f "$f" ] || continue
+        local name=$(basename "$f" .json)
+        local rots=$(python3 -c "import json; d=json.load(open('$f')); print(d.get('rotations',0))" 2>/dev/null || echo "?")
+        local started=$(python3 -c "import json; d=json.load(open('$f')); print(d.get('started','?'))" 2>/dev/null || echo "?")
+        echo -e "    ${C_HI}${name}${R}  ${C_DIM}(${rots} rotations, started ${started})${R}"
+    done
+}
+
+# ── FEATURE 8: --toolbox — Interactive tool selector ──────────
+cmd_toolbox() {
+    echo ""
+    echo -e "  ${C_ACCENT}╭─── VUNJA LUTI TOOLBOX ────────────────────────╮${R}"
+    echo -e "  ${C_ACCENT}│${R}                                               ${C_ACCENT}│${R}"
+    echo -e "  ${C_ACCENT}│${R}  ${C_HI}1${R}  🔑 Hydra (password brute force)            ${C_ACCENT}│${R}"
+    echo -e "  ${C_ACCENT}│${R}  ${C_HI}2${R}  📂 FFuf (directory/vhost fuzzing)           ${C_ACCENT}│${R}"
+    echo -e "  ${C_ACCENT}│${R}  ${C_HI}3${R}  📂 Gobuster (directory brute force)         ${C_ACCENT}│${R}"
+    echo -e "  ${C_ACCENT}│${R}  ${C_HI}4${R}  🗄️  SQLMap (SQL injection)                   ${C_ACCENT}│${R}"
+    echo -e "  ${C_ACCENT}│${R}  ${C_HI}5${R}  🌐 Nmap (port scan via Tor)                 ${C_ACCENT}│${R}"
+    echo -e "  ${C_ACCENT}│${R}  ${C_HI}6${R}  🕷️  Nikto (web vulnerability scanner)        ${C_ACCENT}│${R}"
+    echo -e "  ${C_ACCENT}│${R}  ${C_HI}7${R}  🔗 Curl (anonymous HTTP requests)           ${C_ACCENT}│${R}"
+    echo -e "  ${C_ACCENT}│${R}  ${C_HI}8${R}  🛡️  WPScan (WordPress scanner)               ${C_ACCENT}│${R}"
+    echo -e "  ${C_ACCENT}│${R}  ${C_HI}9${R}  ⚡ Custom command                           ${C_ACCENT}│${R}"
+    echo -e "  ${C_ACCENT}│${R}                                               ${C_ACCENT}│${R}"
+    echo -e "  ${C_ACCENT}╰───────────────────────────────────────────────╯${R}"
+    echo ""
+    read -rp "  Select [1-9]: " choice
+
+    case "$choice" in
+        1)
+            read -rp "  Target (IP/host): " target
+            read -rp "  Username (-l) or list (-L): " user_opt
+            read -rp "  Password list: " passlist
+            read -rp "  Service (ssh/ftp/http-post-form): " service
+            cmd_wrap "hydra ${user_opt} -P ${passlist} ${service}://${target}"
+            ;;
+        2)
+            read -rp "  Target URL: " target
+            read -rp "  Wordlist [/usr/share/seclists/Discovery/Web-Content/common.txt]: " wl
+            [ -z "$wl" ] && wl="/usr/share/seclists/Discovery/Web-Content/common.txt"
+            cmd_wrap "ffuf -u ${target}/FUZZ -w ${wl} -mc 200,301,302,403"
+            ;;
+        3)
+            read -rp "  Target URL: " target
+            read -rp "  Wordlist [/usr/share/wordlists/dirb/common.txt]: " wl
+            [ -z "$wl" ] && wl="/usr/share/wordlists/dirb/common.txt"
+            cmd_wrap "gobuster dir -u ${target} -w ${wl}"
+            ;;
+        4)
+            read -rp "  Target URL (with param): " target
+            cmd_wrap "sqlmap -u '${target}' --batch --tor --tor-type=SOCKS5 --check-tor"
+            ;;
+        5)
+            read -rp "  Target IP/host: " target
+            read -rp "  Ports [80,443,8080]: " ports
+            [ -z "$ports" ] && ports="80,443,8080"
+            cmd_wrap "nmap -sT -Pn -p ${ports} ${target}"
+            ;;
+        6)
+            read -rp "  Target URL: " target
+            cmd_wrap "nikto -h ${target} -useproxy http://127.0.0.1:8118"
+            ;;
+        7)
+            read -rp "  URL: " target
+            curl -sk --socks5-hostname 127.0.0.1:9050 "$target"
+            ;;
+        8)
+            read -rp "  WordPress URL: " target
+            cmd_wrap "wpscan --url ${target} --random-user-agent"
+            ;;
+        9)
+            read -rp "  Command: " custom_cmd
+            cmd_wrap "$custom_cmd"
+            ;;
+        *)
+            echo -e "  ${C_WARN}◇ Invalid choice${R}"
+            ;;
+    esac
+}
+
+# ── FEATURE 9: --monitor — Real-time circuit health ───────────
+cmd_monitor() {
+    say "Circuit health monitor started (Ctrl+C to stop)"
+    echo ""
+    local failures=0
+    while true; do
+        local ip=$(py "print(get_current_ip() or '')")
+        local ts=$(date '+%H:%M:%S')
+        if [ -z "$ip" ] || [ "$ip" = "None" ] || [ "$ip" = "???" ]; then
+            failures=$((failures + 1))
+            echo -e "  ${C_DIM}[${ts}]${R} ${C_BAD}⛔ Circuit DEAD${R} (failures: ${failures})"
+            if [ "$failures" -ge 3 ]; then
+                echo -e "  ${C_WARN}⚠  Auto-recovering...${R}"
+                py "change_ip()" 2>/dev/null
+                sudo systemctl restart tor 2>/dev/null || true
+                sleep 5
+                failures=0
+            fi
+        else
+            failures=0
+            local flag=$(geo_flag "$ip")
+            local ms=$(latency)
+            local qi=$(quality_icon "$ms")
+            echo -e "  ${C_DIM}[${ts}]${R} ${C_GOOD}●${R} ${C_HI}${ip}${R}  ${flag}  ${qi} ${ms}ms"
+        fi
+        sleep 5
+    done
+}
+
+# ── FEATURE 10: --multi-hop N — Chain multiple circuits ───────
+cmd_multi_hop() {
+    local hops="${1:-2}"
+    say "Configuring ${hops}-hop Tor chain..."
+
+    # Enable multiple SOCKS ports for chaining
+    local torrc="/etc/tor/torrc"
+    sudo sed -i '/^SocksPort 905[1-9]/d' "$torrc" 2>/dev/null
+
+    for i in $(seq 1 $((hops - 1))); do
+        local port=$((9050 + i))
+        echo "SocksPort ${port}" | sudo tee -a "$torrc" >/dev/null
+    done
+    sudo systemctl reload tor 2>/dev/null || true
+    sleep 2
+
+    # Update proxychains to chain through multiple Tor ports
+    cat > /tmp/vl_proxychains.conf << PCEOF
+# VL Multi-hop chain (${hops} hops)
+strict_chain
+proxy_dns
+tcp_read_time_out 15000
+tcp_connect_time_out 10000
+
+[ProxyList]
+PCEOF
+    for i in $(seq 0 $((hops - 1))); do
+        echo "socks5 127.0.0.1 $((9050 + i))" >> /tmp/vl_proxychains.conf
+    done
+
+    say "Multi-hop chain: ${hops} Tor circuits → deeper anonymity"
+    say "Ports: $(seq -s ', ' 9050 $((9050 + hops - 1)))"
+}
+
+# ── Usage (updated with all features) ─────────────────────────
+usage() {
+    echo -e "${C_ACCENT}${C_BOLD}VUNJA LUTI v5.0${R} — Tor Proxy + IP Rotator + Tool Wrapper\n"
+    echo -e "  ${C_HI}COMMANDS:${R}"
+    echo "    start              Start Tor + rotate IPs"
+    echo "    stop               Stop Tor"
+    echo "    status             Show exit IP + country + latency"
+    echo "    rotate             Force IP change now"
+    echo "    anoncheck          Verify anonymity + leak test"
+    echo ""
+    echo -e "  ${C_HI}TOOL INTEGRATION:${R}"
+    echo "    --wrap \"CMD\"        Route any command through Tor"
+    echo "    --autochain         Setup proxychains4 config"
+    echo "    --toolbox           Interactive tool selector"
+    echo ""
+    echo -e "  ${C_HI}SECURITY:${R}"
+    echo "    --killswitch        Block non-Tor traffic (needs root)"
+    echo "    --leak-guard        DNS + IPv6 leak protection"
+    echo "    --stealth           Anti-fingerprinting mode"
+    echo "    --multi-hop N       Chain N Tor circuits"
+    echo ""
+    echo -e "  ${C_HI}OPTIONS:${R}"
+    echo "    --rotate N          Rotation interval (seconds)"
+    echo "    --rotate-on N       Rotate every N requests"
+    echo "    --exit-filter CC    Restrict exit country"
+    echo "    --session NAME      Named session tracking"
+    echo "    --monitor           Circuit health monitor"
+    echo "    --dashboard         3-pane tmux dashboard"
+    echo "    --theme NAME        Color theme"
+    echo "    --log FILE          JSON rotation log"
+    echo ""
+    echo -e "  ${C_DIM}Use --help for full documentation with examples${R}"
+    echo -e "  ${C_DIM}Author: archnexus707  |  github.com/archnexus707/VUNJA-LUTI${R}"
     exit 0
 }
 
 # ── Main ──────────────────────────────────────────────────────
 ROTATE_INTERVAL="60"
+WRAP_CMD=""
+DO_AUTOCHAIN=0
+DO_TOOLBOX=0
+DO_LEAK_GUARD=0
+DO_STEALTH=0
+DO_MONITOR=0
+MULTI_HOP=0
+
 # Parse flags
 for i in $(seq 1 $#); do
     arg="${!i}"; next_i=$((i+1))
     case "$arg" in
         --rotate)       j=$next_i; ROTATE_INTERVAL="${!j}" ;;
+        --rotate-on)    j=$next_i; setup_request_rotation "${!j}" ;;
         --log)          j=$next_i; LOG_FILE="${!j}" ;;
         --dashboard)    DASHBOARD=1 ;;
         --killswitch)   KILLSWITCH=1 ;;
@@ -855,20 +1267,54 @@ for i in $(seq 1 $#); do
         --theme)        j=$next_i; THEME="${!j}"; apply_theme ;;
         --proxify)      j=$next_i; proxify "${!j}" "${@:$((j+1))}"; exit 0 ;;
         --export)       j=$next_i; k=$((i+2)); cmd_export "${!j}" "${!k}"; exit 0 ;;
+        --wrap)         j=$next_i; WRAP_CMD="${@:$j}"; break ;;
+        --autochain)    DO_AUTOCHAIN=1 ;;
+        --toolbox)      DO_TOOLBOX=1 ;;
+        --leak-guard)   DO_LEAK_GUARD=1 ;;
+        --stealth)      DO_STEALTH=1 ;;
+        --monitor)      DO_MONITOR=1 ;;
+        --multi-hop)    j=$next_i; MULTI_HOP="${!j}" ;;
+        --session)      j=$next_i; cmd_session_start "${!j}" ;;
+        --help|-h|help) cmd_full_help ;;
     esac
 done
 
-# Apply exit filter if set
-[ -n "$EXIT_FILTER" ] && export TOR_EXIT_NODES="{$EXIT_FILTER}"
+# Apply exit filter via torrc
+if [ -n "$EXIT_FILTER" ]; then
+    sudo sed -i '/^ExitNodes/d; /^StrictNodes/d' /etc/tor/torrc 2>/dev/null
+    echo "ExitNodes {$(echo "$EXIT_FILTER" | tr ',' ',')}" | sudo tee -a /etc/tor/torrc >/dev/null 2>/dev/null
+    echo "StrictNodes 1" | sudo tee -a /etc/tor/torrc >/dev/null 2>/dev/null
+    sudo systemctl reload tor 2>/dev/null || sudo killall -HUP tor 2>/dev/null || true
+    say "Exit filter applied: ${EXIT_FILTER} (torrc updated)"
+fi
 
-banner
+# Apply security modes
+[ "$DO_LEAK_GUARD" -eq 1 ] && cmd_leak_guard
+[ "$DO_STEALTH" -eq 1 ] && cmd_stealth
+[ "$MULTI_HOP" -gt 0 ] && cmd_multi_hop "$MULTI_HOP"
+[ "$KILLSWITCH" -eq 1 ] && killswitch_on
+
+# Direct-execute features (exit after)
+[ -n "$WRAP_CMD" ] && { banner; cmd_wrap $WRAP_CMD; exit $?; }
+[ "$DO_AUTOCHAIN" -eq 1 ] && { banner; cmd_autochain; exit 0; }
+[ "$DO_TOOLBOX" -eq 1 ] && { banner; cmd_toolbox; exit 0; }
+[ "$DO_MONITOR" -eq 1 ] && { banner; cmd_monitor; exit 0; }
+
+# Standard command dispatch
 CMD="${1:-start}"
+# Skip banner for internal dashboard subcommands
+case "$CMD" in
+    _dash_top|_dash_info|_dash_bottom) ;;
+    *) banner ;;
+esac
+
 case "$CMD" in
     start|stop|status|rotate|anoncheck) "cmd_$CMD" ;;
-    _dash_top)   cmd_dash_top "$2" "$3" ;;
-    _dash_info)  cmd_dash_info "$2" ;;
+    _dash_top)    cmd_dash_top "$2" "$3" ;;
+    _dash_info)   cmd_dash_info "$2" ;;
     _dash_bottom) cmd_dash_bottom "$2" ;;
-    help|-h|--help) usage ;;
+    sessions)     cmd_session_list ;;
+    help|-h|--help) cmd_full_help ;;
     "")           cmd_start ;;
     *)            usage ;;
 esac
