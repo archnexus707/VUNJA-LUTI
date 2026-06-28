@@ -5,9 +5,8 @@ import (
 	"os"
 )
 
-// Truecolour ANSI helpers (neon). Colours mirror the Python "cyberpunk" theme.
 var (
-	cAccent = rgb(0xff, 0x2a, 0x6d) // pink
+	cAccent = rgb(0xff, 0x2a, 0x6d)
 	cCyan   = rgb(0x05, 0xd9, 0xe8)
 	cGreen  = rgb(0x39, 0xff, 0x14)
 	cYellow = rgb(0xf9, 0xf0, 0x02)
@@ -32,9 +31,9 @@ func col(c, s string) string {
 	return c + s + reset
 }
 
-func say(s string)  { fmt.Printf("  %s  %s\n", col(cAccent, "◆"), s) }
-func okMsg(s string) { fmt.Printf("  %s  %s\n", col(cGreen, "✔"), s) }
-func warn(s string) { fmt.Printf("  %s  %s\n", col(cYellow, "◇"), s) }
+func say(s string)    { fmt.Printf("  %s  %s\n", col(cAccent, "◆"), s) }
+func okMsg(s string)  { fmt.Printf("  %s  %s\n", col(cGreen, "✔"), s) }
+func warn(s string)   { fmt.Printf("  %s  %s\n", col(cYellow, "◇"), s) }
 func errMsg(s string) { fmt.Printf("  %s  %s\n", col(cRed, "✖"), s) }
 
 const banner = `

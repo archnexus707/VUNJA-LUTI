@@ -1,10 +1,11 @@
 __pycache__/
 *.pyc
-build/
-dist/
+/build/
+/dist/
 *.egg-info/
 .vl_*
 
-# Go PoC build artifacts
+# Go
 go/vl
 go/vl-*
+go/build/bin/

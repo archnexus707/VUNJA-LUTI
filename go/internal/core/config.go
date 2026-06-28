@@ -1,7 +1,6 @@
-package main
-
-// Reads/writes the SAME ~/.config/vl/config.json the Python build uses, so the
-// Go and Python tools share the control password and settings.
+// Package core holds the shared VUNJA LUTI engine used by both the CLI (cmd/vl)
+// and the Wails GUI. Standard-library only.
+package core
 
 import (
 	"encoding/json"
@@ -10,6 +9,8 @@ import (
 	"path/filepath"
 )
 
+// Config mirrors the Python build's ~/.config/vl/config.json so the two tools
+// share settings (notably the control password).
 type Config struct {
 	Theme           string `json:"theme"`
 	RotateInterval  int    `json:"rotate_interval"`
@@ -18,10 +19,10 @@ type Config struct {
 	ControlPort     int    `json:"control_port"`
 	ControlPassword string `json:"control_password"`
 
-	rest map[string]json.RawMessage `json:"-"`
+	rest map[string]json.RawMessage
 }
 
-func configDir() string {
+func ConfigDir() string {
 	if d := os.Getenv("VL_CONFIG_DIR"); d != "" {
 		return d
 	}
@@ -29,19 +30,18 @@ func configDir() string {
 	return filepath.Join(home, ".config", "vl")
 }
 
-func configPath() string { return filepath.Join(configDir(), "config.json") }
+func ConfigPath() string { return filepath.Join(ConfigDir(), "config.json") }
 
-func defaultConfig() Config {
+func Default() Config {
 	return Config{Theme: "cyberpunk", RotateInterval: 60, SocksPort: 9050, ControlPort: 9051}
 }
 
-func loadConfig() Config {
-	c := defaultConfig()
-	data, err := os.ReadFile(configPath())
+func Load() Config {
+	c := Default()
+	data, err := os.ReadFile(ConfigPath())
 	if err != nil {
 		return c
 	}
-	// preserve unknown keys so we don't clobber Python-written fields
 	c.rest = map[string]json.RawMessage{}
 	_ = json.Unmarshal(data, &c.rest)
 	_ = json.Unmarshal(data, &c)
@@ -54,8 +54,8 @@ func loadConfig() Config {
 	return c
 }
 
-func (c Config) save() error {
-	if err := os.MkdirAll(configDir(), 0o755); err != nil {
+func (c Config) Save() error {
+	if err := os.MkdirAll(ConfigDir(), 0o755); err != nil {
 		return err
 	}
 	merged := map[string]any{}
@@ -69,11 +69,8 @@ func (c Config) save() error {
 	merged["control_port"] = c.ControlPort
 	merged["control_password"] = c.ControlPassword
 	b, _ := json.MarshalIndent(merged, "", "  ")
-	if err := os.WriteFile(configPath(), b, 0o600); err != nil {
-		return err
-	}
-	return nil
+	return os.WriteFile(ConfigPath(), b, 0o600)
 }
 
-func (c Config) socksAddr() string   { return fmt.Sprintf("127.0.0.1:%d", c.SocksPort) }
-func (c Config) controlAddr() string { return fmt.Sprintf("127.0.0.1:%d", c.ControlPort) }
+func (c Config) SocksAddr() string   { return fmt.Sprintf("127.0.0.1:%d", c.SocksPort) }
+func (c Config) ControlAddr() string { return fmt.Sprintf("127.0.0.1:%d", c.ControlPort) }
