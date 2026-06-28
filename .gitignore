@@ -9,3 +9,4 @@ __pycache__/
 go/vl
 go/vl-*
 go/build/bin/
+go/frontend/wailsjs/
