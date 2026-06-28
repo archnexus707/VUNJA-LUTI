@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Vunja Luti
+GenericName=Tor Proxy Manager
+Comment=Tor proxy, IP rotator and tool wrapper
+Exec=vunja-luti-gui
+Icon=vunja-luti
+Terminal=false
+Categories=Network;Security;System;
+Keywords=tor;proxy;anonymity;privacy;rotate;pentest;
+StartupNotify=true

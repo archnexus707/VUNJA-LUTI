@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vunja-luti"
+version = "6.0.0"
+description = "Tor proxy + IP rotator + tool wrapper, with CLI and PyQt6 GUI"
+readme = "README.md"
+license = { text = "Ethical-Use-Only" }
+authors = [{ name = "archnexus707", email = "archnexus707@gmail.com" }]
+requires-python = ">=3.9"
+dependencies = [
+    "stem>=1.8",
+    "requests>=2.25",
+    "PySocks>=1.7",
+]
+
+[project.optional-dependencies]
+gui = ["PyQt6>=6.4"]
+
+[project.scripts]
+vl = "vunjaluti.cli.main:main"
+vunja-luti = "vunjaluti.cli.main:main"
+
+[project.gui-scripts]
+vunja-luti-gui = "vunjaluti.gui.app:main"
+
+[tool.setuptools]
+packages = ["vunjaluti", "vunjaluti.core", "vunjaluti.cli", "vunjaluti.gui"]
+
+[tool.setuptools.package-data]
+vunjaluti = ["resources/fonts/*.ttf", "resources/icons/*"]
