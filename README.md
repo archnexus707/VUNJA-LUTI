@@ -1,348 +1,192 @@
 <p align="center">
-  <img src="assets/neon_realm.webp" alt="Neon Realm — Animated 4K Cyberpunk" width="100%">
+  <img src="assets/neon_realm.webp" alt="Vunja Luti — Neon Realm" width="100%">
 </p>
 
-<h1 align="center">⚡ VUNJA LUTI v5.0 ⚡</h1>
-<h3 align="center">Tor Proxy + IP Rotator + Tool Wrapper</h3>
+<h1 align="center">
+  <img src="assets/icon.png" width="34" align="top" alt=""> &nbsp;VUNJA LUTI <code>v6.0</code>
+</h1>
+
+<h3 align="center">Tor Proxy · IP Rotator · Tool Wrapper — now with a neon GUI &amp; a one-click <code>.deb</code></h3>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-5.0-mauve?style=flat-square">
-  <img src="https://img.shields.io/badge/platform-Kali%20Linux-blue?style=flat-square">
-  <img src="https://img.shields.io/badge/features-10%20new-green?style=flat-square">
-  <img src="https://img.shields.io/badge/license-Ethical%20Use%20Only-red?style=flat-square">
-  <img src="https://img.shields.io/badge/author-archnexus__707-orange?style=flat-square">
+  <img src="https://img.shields.io/badge/version-6.0.0-ff2a6d?style=flat-square">
+  <img src="https://img.shields.io/badge/platform-Kali%20%2F%20Debian-05d9e8?style=flat-square">
+  <img src="https://img.shields.io/badge/interface-CLI%20%2B%20GUI-d300c5?style=flat-square">
+  <img src="https://img.shields.io/badge/engine-stem%20(Tor%20control)-39ff14?style=flat-square">
+  <img src="https://img.shields.io/badge/license-Ethical%20Use%20Only-ff003c?style=flat-square">
 </p>
 
+---
+
+## 🧠 What is it?
+
+**Vunja Luti** *(Swahili: “break the web”)* routes your traffic through Tor's SOCKS5
+proxy, **rotates the exit IP** on a schedule using Tor's control protocol, **wraps any
+command** through `proxychains`, and enforces **kill-switch** and **leak-guard** policies.
+
+Version 6 is a full rebuild: a single Python engine now powers both a **themed CLI** and a
+**neon PyQt6 desktop app**, packaged as an installable **`.deb`**.
+
 <p align="center">
-  <img src="assets/ghost_proxy.png" width="45%" alt="Ghost Proxy — Terminal + Hood">
+  <img src="assets/screenshot-gui.png" alt="Vunja Luti GUI — Dashboard" width="92%">
+</p>
+
+---
+
+## ✨ Highlights
+
+| | |
+|---|---|
+| 🖥️ **Desktop GUI** | Live status, animated **circuit map** with country flags, latency sparkline, live rotation feed, system-tray controls + notifications. |
+| ⌨️ **Themed CLI** | `vl start / status / rotate / wrap / toolbox / monitor / doctor`, 9 colour themes, truecolour output. |
+| 🔁 **Real rotation** | Identity changes via the Tor **control port** (`stem`) — deterministic, not screen-scraping. |
+| 🧰 **Tool wrapper** | Push hydra / ffuf / gobuster / sqlmap / nmap / nikto / wpscan / curl through Tor, with auto IP rotation. |
+| 🛡️ **Kill-switch** | iptables egress lock with **full backup/restore** — never nukes your existing rules. |
+| 🚱 **Leak-guard** | Disables IPv6 + routes DNS through Tor to stop DNS/IPv6 leaks. |
+| 🌍 **Exit filter** | Pin exit countries (`us,nl,de`) using **valid** Tor syntax. |
+| 🩺 **Doctor** | One command checks the whole stack and auto-enables the Tor control port. |
+| 📦 **.deb package** | `apt`-installable, app-menu entry, crisp neon icon, real `vl` / `vunja-luti-gui` commands. |
+
+---
+
+## 🚀 Install (recommended — `.deb`)
+
+Download the latest `vunja-luti_6.0.0_all.deb` from the
+[**Releases**](https://github.com/archnexus707/VUNJA-LUTI/releases) page, then:
+
+```bash
+sudo apt install ./vunja-luti_6.0.0_all.deb
+vl doctor --fix      # enable Tor control port (one time)
+```
+
+That's it. Launch the GUI from your app menu (**Vunja Luti**) or run:
+
+```bash
+vunja-luti-gui       # GUI
+vl start             # CLI rotation loop
+```
+
+---
+
+## 🖼️ Gallery
+
+<p align="center">
+  <img src="assets/screenshot-toolbox.png" width="48%" alt="Toolbox tab">
+  &nbsp;
+  <img src="assets/screenshot-tokyo.png" width="48%" alt="Tokyo Night theme">
+</p>
+<p align="center">
+  <img src="assets/ghost_proxy.png" width="45%" alt="Ghost Proxy">
   &nbsp;&nbsp;
-  <img src="assets/dark_circuit.png" width="45%" alt="Dark Circuit — Tor Network">
+  <img src="assets/dark_circuit.png" width="45%" alt="Dark Circuit">
 </p>
 
 ---
 
-## 🧠 What Is It?
-
-**Vunja Luti** *(Swahili: "break the web")* is an advanced Tor SOCKS5 proxy manager that rotates your IP address, wraps offensive security tools through Tor, enforces killswitch policies, guards against DNS/IPv6 leaks, and provides an interactive toolbox for penetration testing — all invisible to IDS/firewalls.
-
-```
-   ██╗   ██╗██╗   ██╗███╗   ██╗      ██╗██╗   ██╗████████╗██╗
-   ██║   ██║██║   ██║████╗  ██║      ██║██║   ██║╚══██╔══╝██║
-   ██║   ██║██║   ██║██╔██╗ ██║      ██║██║   ██║   ██║   ██║
-   ╚██╗ ██╔╝██║   ██║██║╚██╗██║      ██║██║   ██║   ██║   ██║
-   ╚████╔╝ ╚██████╔╝██║ ╚████║      ██║╚██████╔╝   ██║   ██║
-    ╚═══╝   ╚═════╝ ╚═╝  ╚═══╝      ╚═╝ ╚═════╝    ╚═╝   ╚═╝
-```
-
----
-
-## 🔥 v5.0 — 10 New Features
-
-| # | Feature | Description |
-|---|---------|-------------|
-| 1 | `--wrap "CMD"` | Route **ANY** command through Tor (hydra, ffuf, sqlmap, nmap, gobuster) |
-| 2 | `--autochain` | Auto-generate/install `proxychains4.conf` for Tor routing |
-| 3 | `--help` | Full **nmap-style** man page with usage examples for every scenario |
-| 4 | `--rotate-on N` | Rotate IP every **N requests** (not just time-based) |
-| 5 | `--leak-guard` | Block DNS + IPv6 leaks at **kernel level** (iptables) |
-| 6 | `--stealth` | Anti-fingerprinting: randomize timing, rotate entry guards |
-| 7 | `--session NAME` | Save/resume named sessions with rotation stats |
-| 8 | `--toolbox` | **Interactive menu**: pick tool + auto-configure and execute |
-| 9 | `--monitor` | Real-time circuit health monitor + **auto-recovery** on dead circuits |
-| 10 | `--multi-hop N` | Chain **N Tor circuits** for deeper anonymity |
-
----
-
-## 🚀 Quick Start
+## ⌨️ CLI usage
 
 ```bash
-# 1. Clone
-git clone https://github.com/archnexus707/VUNJA-LUTI.git
-cd VUNJA-LUTI
+vl start                       # start Tor + rotate IPs on a loop
+vl status                      # exit IP, country flag, latency, circuit
+vl rotate                      # force one new identity now
+vl anoncheck                   # confirm exit IP ≠ real IP
+vl monitor                     # live circuit-health watch + auto-recovery
+vl --theme matrix status       # any of 9 themes
 
-# 2. Install dependencies
-chmod +x setup.sh && ./setup.sh
+# route any tool through Tor (quotes & flags are preserved safely)
+vl --rotate 30 wrap -- sqlmap -u 'http://target/page?id=1' --batch
+vl wrap -- nmap -sT -Pn -p 80,443 target.com
 
-# 3. Start Tor + rotation
-./Vunja_Luti.sh start
+# security
+sudo vl --killswitch start         # block all non-Tor egress (auto-restored on stop)
+sudo vl --leak-guard start         # disable IPv6 + DNS-through-Tor
+vl --exit-filter us,nl,de status   # pin exit countries
+vl reset                           # revert every torrc / firewall change VL made
 
-# 4. (Optional) Use alias after setup
-vl start
+vl doctor --fix                    # diagnose + auto-enable control port
+vl toolbox                         # interactive tool picker
 ```
-
----
-
-## 🔑 Tool Integration (The Main Feature)
-
-Route **any** offensive security tool through Tor with automatic IP rotation:
-
-```bash
-# Brute force SSH (IP rotates every 60s automatically)
-vl --wrap "hydra -l root -P /usr/share/wordlists/rockyou.txt ssh://10.10.10.1"
-
-# Directory fuzzing through Tor
-vl --wrap "ffuf -u http://target.com/FUZZ -w /usr/share/seclists/Discovery/Web-Content/common.txt"
-
-# Gobuster with 15s rotation
-vl --rotate 15 --wrap "gobuster dir -u http://target.com -w wordlist.txt"
-
-# SQLMap through Tor
-vl --wrap "sqlmap -u 'http://target.com/page?id=1' --batch"
-
-# Nmap port scan (TCP connect only — works through Tor)
-vl --wrap "nmap -sT -Pn -p 80,443,8080 target.com"
-
-# WPScan WordPress scanner
-vl --wrap "wpscan --url http://target.com --random-user-agent"
-
-# Nikto web scanner
-vl --wrap "nikto -h http://target.com"
-```
-
-### How It Works
-
-```
-┌──────────┐     ┌──────────────┐     ┌─────────────┐     ┌────────┐
-│ Your Tool│────→│ proxychains4 │────→│ Tor SOCKS5  │────→│ Target │
-│ (hydra)  │     │ (auto-config)│     │ 127.0.0.1:  │     │        │
-└──────────┘     └──────────────┘     │    9050     │     └────────┘
-                                      └──────┬──────┘
-                                             │ IP rotates every Ns
-                                             ▼
-                                      IDS/Firewall sees
-                                      ONLY Tor exit IPs
-```
-
----
-
-## 🎮 Interactive Toolbox
-
-```bash
-vl --toolbox
-```
-
-Interactive menu to select and configure tools:
-
-```
-  ╭─── VUNJA LUTI TOOLBOX ────────────────────────╮
-  │                                               │
-  │  1  🔑 Hydra (password brute force)           │
-  │  2  📂 FFuf (directory/vhost fuzzing)         │
-  │  3  📂 Gobuster (directory brute force)       │
-  │  4  🗄️  SQLMap (SQL injection)                 │
-  │  5  🌐 Nmap (port scan via Tor)               │
-  │  6  🕷️  Nikto (web vulnerability scanner)      │
-  │  7  🔗 Curl (anonymous HTTP requests)         │
-  │  8  🛡️  WPScan (WordPress scanner)             │
-  │  9  ⚡ Custom command                         │
-  │                                               │
-  ╰───────────────────────────────────────────────╯
-```
-
----
-
-## 🛡️ Security Features
-
-### Killswitch (blocks ALL non-Tor traffic)
-
-```bash
-sudo vl start --killswitch
-```
-
-### Leak Guard (DNS + IPv6 protection)
-
-```bash
-sudo vl start --leak-guard
-```
-
-### Full Stealth Mode
-
-```bash
-sudo vl start --killswitch --leak-guard --stealth --exit-filter US,NL,DE
-```
-
-### Multi-Hop (chain Tor circuits)
-
-```bash
-vl --multi-hop 3 --wrap "curl http://target.com"
-```
-
----
-
-## 📸 Screenshot
-
-<p align="center">
-  <img src="assets/screenshot.png" alt="Vunja Luti Terminal" width="85%">
-</p>
-
----
-
-## 🎮 All Commands
-
-| Command | Description |
-|---------|-------------|
-| `start` | Start Tor + begin rotating IPs |
-| `stop` | Stop Tor service |
-| `status` | Show exit IP, country flag, latency, killswitch status |
-| `rotate` | Force a single IP rotation now |
-| `anoncheck` | Verify anonymity + DNS leak test |
-| `sessions` | List saved sessions |
-
----
-
-## ⚙️ All Flags
-
-### Tool Integration
-
-| Flag | Description |
-|------|-------------|
-| `--wrap "CMD"` | Execute any command through Tor with IP rotation |
-| `--autochain` | Generate/install proxychains4 config |
-| `--toolbox` | Interactive tool selector menu |
-| `--proxify APP` | Launch specific app through Tor (firefox, chromium, curl, nmap) |
-
-### Security
-
-| Flag | Description |
-|------|-------------|
-| `--killswitch` | Block ALL non-Tor traffic (iptables, needs root) |
-| `--leak-guard` | Enable DNS + IPv6 leak protection |
-| `--stealth` | Anti-fingerprinting mode (jitter + guard rotation) |
-| `--multi-hop N` | Chain N Tor circuits for deeper anonymity |
-
-### Rotation
-
-| Flag | Description |
-|------|-------------|
-| `--rotate N` | IP rotation interval in seconds (default: 60) |
-| `--rotate-on N` | Rotate IP every N requests |
-| `--exit-filter CC` | Restrict exit nodes: `US`, `DE`, `NL`, `FR`, `JP`... |
-| `--fzf-picker` | Interactive exit country selector |
-
-### Session & Logging
-
-| Flag | Description |
-|------|-------------|
-| `--session NAME` | Save/resume named session with stats |
-| `--log FILE` | Save rotation history as JSON |
-| `--export LOG OUT` | Export rotation log to JSON + CSV report |
-| `--monitor` | Real-time circuit health monitor + auto-recovery |
-
-### Display
-
-| Flag | Description |
-|------|-------------|
-| `--dashboard` | 3-pane tmux dashboard (live feed + circuit + log) |
-| `--theme NAME` | Color theme (see below) |
-| `--help` | Full reference manual with examples |
 
 ---
 
 ## 🎨 Themes
 
-```bash
-vl --theme <name> start
-```
+`catppuccin` · `tokyo-night` · `nord` · `everforest` · `rose-pine` · `dracula` ·
+`gruvbox` · `cyberpunk` *(default)* · `matrix`
 
-| Theme | Vibe |
-|-------|------|
-| `catppuccin` | Mauve + lavender pastel *(default)* |
-| `tokyo-night` | Deep blue/purple night |
-| `nord` | Frost blue, cold & clean |
-| `everforest` | Forest green, earthy |
-| `rose-pine` | Rose gold + pink |
-| `dracula` | Classic purple dark |
-| `gruvbox` | Retro warm tones |
-| `cyberpunk` | Neon pink + cyan |
-| `matrix` | Full green terminal |
+Switch live from the GUI header, or `vl --theme <name> …` on the CLI.
 
 ---
 
-## 📟 Dashboard
+## 🧩 How rotation works
 
-```bash
-vl --dashboard start
 ```
-
-3-pane tmux layout with live rotation feed, circuit map, latency sparklines, and history log.
+┌──────────┐   ┌──────────────┐   ┌──────────────┐   ┌────────┐
+│ Your tool│──▶│ proxychains4 │──▶│  Tor SOCKS5  │──▶│ Target │
+│ (sqlmap) │   │ (auto-config)│   │ 127.0.0.1:   │   │        │
+└──────────┘   └──────────────┘   │     9050     │   └────────┘
+                                  └──────┬───────┘
+              NEWNYM via control port ◀──┘  every N seconds
+              → fresh exit IP, IDS sees only Tor exits
+```
 
 ---
 
-## 📋 Full Help
+## 🛠️ Build from source
 
 ```bash
-vl --help
+git clone https://github.com/archnexus707/VUNJA-LUTI.git
+cd VUNJA-LUTI
+
+# build the .deb (no debhelper needed; uses dpkg-deb)
+bash packaging/build-deb.sh
+sudo apt install ./dist/vunja-luti_6.0.0_all.deb
+
+# …or run straight from the tree
+pip install -e .
+vl status
 ```
 
-Displays a complete **nmap-style** reference manual with:
-- All commands and flags
-- Usage examples for every scenario
-- Tool integration examples (hydra, ffuf, nmap, sqlmap, gobuster)
-- Exit country codes
-- Security recommendations
-
----
-
-## 📂 Requirements
-
-All installed automatically by `setup.sh`:
-
-| Package | Purpose |
-|---------|---------|
-| `tor` | SOCKS5 proxy daemon |
-| `proxychains4` | Route tools through Tor |
-| `curl` | HTTP requests + anonymity checks |
-| `tmux` | Dashboard layout |
-| `fzf` | Interactive selectors |
-| `toilet` / `figlet` | ASCII banners |
-| `python3` + `requests[socks]` | tornet IP rotation engine |
-
----
-
-## 🧩 Directory Structure
-
-```
-VUNJA-LUTI/
-├── Vunja_Luti.sh       ← Main script (1320 lines, 10 features)
-├── setup.sh            ← One-shot dependency installer
-├── README.md           ← This file
-├── assets/             ← Images
-├── tornet/             ← Auto-cloned by setup.sh (git-ignored)
-└── .gitignore
-```
+**Dependencies** (pulled in by the `.deb`): `python3-stem`, `python3-requests`,
+`python3-socks`, `tor`; recommends `python3-pyqt6`, `proxychains4`,
+`fonts-noto-color-emoji`, `fonts-jetbrains-mono`.
 
 ---
 
 ## ⚠️ Troubleshooting
 
 | Problem | Fix |
-|---------|-----|
-| `tornet module not found` | Run `./setup.sh` or `git clone https://github.com/ayadseghairi/tornet.git tornet` |
-| Tor not running | `sudo systemctl start tor` |
-| `--wrap` says "rotation disabled" | Start Tor first: `sudo systemctl start tor` |
-| No exit IP after start | Wait 15s for Tor bootstrap |
-| Icons broken | Install Nerd Font via `setup.sh`, restart terminal |
-| Killswitch/leak-guard needs root | Run with `sudo` |
-| proxychains4 not found | `sudo apt install proxychains4` |
+|---|---|
+| Rotation does nothing | `vl doctor --fix` — enables Tor's control port |
+| GUI won't launch | `sudo apt install python3-pyqt6` |
+| `proxychains4 not found` | `sudo apt install proxychains4` |
+| Flags show as letters | install `fonts-noto-color-emoji`, restart the app |
+| Killswitch locked me out | `vl reset` (restores the iptables snapshot) |
+| No exit IP after start | wait ~15 s for Tor to bootstrap |
+
+---
+
+## 🗂️ Project layout
+
+```
+vunjaluti/
+├── core/      engine·geo·firewall·torrc·wrap·sessions·doctor·config
+├── cli/       vl / vunja-luti  (argparse, themed)
+├── gui/       PyQt6 app · widgets · workers · neon QSS
+└── resources/ icons + fonts
+packaging/     build-deb.sh · make_icon.py · vunja-luti.desktop
+legacy/        the original Vunja_Luti.sh (kept for reference)
+```
 
 ---
 
 ## 👤 Author
 
-**archnexus707** — solo developer, privacy advocate, offensive security researcher.
-
-## ☕ Support
-
-If Vunja Luti keeps you invisible, consider buying me a coffee:
-
-[![](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-archnexus707@gmail.com-yellow?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](mailto:archnexus707@gmail.com)
-
----
+**archnexus707** — offensive-security researcher & privacy advocate.
+☕ Support: `archnexus707@gmail.com`
 
 ## 📜 License
 
-Ethical use only. Authorized testing and privacy protection. Not for illegal activity.
+**Ethical use only** — authorised testing and privacy protection. Not for illegal activity.
 
-<p align="center">
-  <sub>Made with ❤️ on Kali Linux by archnexus707</sub>
-</p>
+<p align="center"><sub>Made with ⚡ on Kali Linux by archnexus707</sub></p>
