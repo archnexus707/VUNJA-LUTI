@@ -32,7 +32,12 @@ echo "[*] wails doctor:"
 wails doctor || true
 
 echo "[*] Building GUI…"
-wails build -clean
+# Modern distros ship webkit2gtk-4.1 → needs the webkit2_41 build tag.
+if pkg-config --exists webkit2gtk-4.1 2>/dev/null; then
+  wails build -clean -tags webkit2_41
+else
+  wails build -clean
+fi
 
 echo "[✓] Built: $HERE/build/bin/vunja-luti-gui"
 echo "    Run it:  ./build/bin/vunja-luti-gui"

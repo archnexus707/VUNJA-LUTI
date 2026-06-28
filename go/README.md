@@ -47,8 +47,10 @@ Manual equivalent:
 ```bash
 sudo apt install build-essential pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev
 go install github.com/wailsapp/wails/v2/cmd/wails@latest
-wails build && ./build/bin/vunja-luti-gui
+wails build -tags webkit2_41        # the tag is required for webkit2gtk-4.1
+./build/bin/vunja-luti-gui
 ```
+> Built & launched successfully on Kali (webkit2gtk 2.52, GTK3).
 
 ### GUI features
 Live status card · animated **circuit map** with country flags · latency
