@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="cyberpunk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VUNJA LUTI</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- header -->
+    <header class="topbar">
+      <div class="brand">
+        <svg class="pac" viewBox="0 0 128 128" width="40" height="40" aria-hidden="true">
+          <defs>
+            <radialGradient id="pacg" cx="0.4" cy="0.4" r="0.7">
+              <stop offset="0" stop-color="#ffe600"/><stop offset="1" stop-color="#ffb300"/>
+            </radialGradient>
+          </defs>
+          <circle cx="92" cy="64" r="4" fill="#05d9e8"/>
+          <circle cx="112" cy="64" r="3.4" fill="#05d9e8"/>
+          <path d="M58 64 L96 46 A42 42 0 1 0 96 82 Z" fill="url(#pacg)"/>
+          <circle cx="58" cy="42" r="5" fill="#101018"/>
+        </svg>
+        <div>
+          <div class="title">VUNJA LUTI</div>
+          <div class="subtitle">Tor Proxy · IP Rotator · Tool Wrapper</div>
+        </div>
+      </div>
+      <div class="theme-pick">
+        <label>Theme</label>
+        <select id="theme">
+          <option value="cyberpunk">cyberpunk</option>
+          <option value="tokyo-night">tokyo-night</option>
+          <option value="matrix">matrix</option>
+          <option value="dracula">dracula</option>
+          <option value="nord">nord</option>
+        </select>
+      </div>
+    </header>
+
+    <!-- tabs -->
+    <nav class="tabs">
+      <button class="tab active" data-tab="dashboard">Dashboard</button>
+      <button class="tab" data-tab="toolbox">Toolbox</button>
+      <button class="tab" data-tab="settings">Settings</button>
+    </nav>
+
+    <!-- DASHBOARD -->
+    <section class="page active" id="dashboard">
+      <div class="card accent">
+        <div class="statline">
+          <div class="state"><span id="dot" class="dot"></span><span id="state">checking…</span></div>
+          <div class="ip" id="ip">—</div>
+        </div>
+        <div class="stats">
+          <div><div class="val" id="country">—</div><div class="key">Country</div></div>
+          <div><div class="val" id="latency">—</div><div class="key">Latency</div></div>
+          <div><div class="val" id="rotations">0</div><div class="key">Rotations</div></div>
+          <div><div class="val" id="uptime">—</div><div class="key">Uptime</div></div>
+        </div>
+        <div class="bar"><div class="bar-fill" id="boot"></div><span class="bar-label" id="bootlabel">Tor bootstrap</span></div>
+      </div>
+
+      <div class="controls">
+        <button id="start" class="btn primary">▶ START</button>
+        <button id="rotate" class="btn">⟳ ROTATE</button>
+        <button id="stop" class="btn danger">■ STOP</button>
+        <span class="spacer"></span>
+        <label class="switch"><input type="checkbox" id="auto"><span></span>Auto-rotate</label>
+      </div>
+
+      <div class="card">
+        <div class="card-title">CIRCUIT</div>
+        <div class="circuit" id="circuit"><span class="muted">no circuit yet — start Tor</span></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">LATENCY</div>
+        <canvas id="spark" height="70"></canvas>
+      </div>
+
+      <div class="card grow">
+        <div class="card-title">LIVE FEED</div>
+        <pre class="console" id="feed"></pre>
+      </div>
+    </section>
+
+    <!-- TOOLBOX -->
+    <section class="page" id="toolbox">
+      <div class="card">
+        <div class="card-title">RUN A TOOL THROUGH TOR</div>
+        <div class="row">
+          <label>Tool</label>
+          <select id="tool"></select>
+        </div>
+        <div id="toolform" class="form"></div>
+        <div class="controls">
+          <button id="run" class="btn primary">▶ RUN</button>
+          <button id="kill" class="btn danger" disabled>■ STOP</button>
+        </div>
+      </div>
+      <div class="card grow">
+        <div class="card-title">OUTPUT</div>
+        <pre class="console" id="output"></pre>
+      </div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section class="page" id="settings">
+      <div class="card">
+        <div class="card-title">SETTINGS</div>
+        <div class="row"><label>Rotation interval (s)</label><input type="number" id="interval" min="5" max="3600" value="60"></div>
+        <div class="row"><label>Exit countries</label><input type="text" id="exitfilter" placeholder="us,nl,de"><button id="applyexit" class="btn small">Apply</button></div>
+        <div class="row"><label>Setup</label><button id="doctor" class="btn small">🩺 Run doctor</button><button id="doctorfix" class="btn small primary">Fix control port</button></div>
+        <div class="row"><label>Cleanup</label><button id="reset" class="btn small danger">⟲ Reset all VL changes</button></div>
+        <pre class="console small" id="doctorout"></pre>
+      </div>
+    </section>
+
+    <footer class="statusbar" id="statusbar">Ready</footer>
+  </div>
+  <script src="main.js"></script>
+</body>
+</html>

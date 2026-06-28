@@ -1,7 +1,7 @@
-package main
+package core
 
-// Managed torrc editing + doctor fix. Uses the SAME fenced markers as the Python
-// build so both tools manage one shared block.
+// Managed torrc editing — same fenced markers as the Python build, so both
+// tools manage one shared block. Privilege via pkexec (GUI) or sudo (terminal).
 
 import (
 	"crypto/rand"
@@ -13,16 +13,15 @@ import (
 )
 
 const (
-	torrcPath  = "/etc/tor/torrc"
+	TorrcPath  = "/etc/tor/torrc"
 	blockBegin = "# >>> VUNJA-LUTI managed block >>>"
 	blockEnd   = "# <<< VUNJA-LUTI managed block <<<"
 )
 
-func escalator() []string {
+func Escalator() []string {
 	if os.Geteuid() == 0 {
 		return nil
 	}
-	// no controlling terminal + a display -> graphical prompt
 	if fi, _ := os.Stdin.Stat(); fi != nil && (fi.Mode()&os.ModeCharDevice) == 0 {
 		if os.Getenv("DISPLAY") != "" {
 			if _, err := exec.LookPath("pkexec"); err == nil {
@@ -33,8 +32,8 @@ func escalator() []string {
 	return []string{"sudo"}
 }
 
-func runPriv(stdin string, argv ...string) error {
-	full := append(escalator(), argv...)
+func RunPriv(stdin string, argv ...string) error {
+	full := append(Escalator(), argv...)
 	cmd := exec.Command(full[0], full[1:]...)
 	if stdin != "" {
 		cmd.Stdin = strings.NewReader(stdin)
@@ -46,18 +45,16 @@ func runPriv(stdin string, argv ...string) error {
 	return nil
 }
 
-func readTorrc() string {
-	b, err := os.ReadFile(torrcPath)
-	if err == nil {
+func ReadTorrc() string {
+	if b, err := os.ReadFile(TorrcPath); err == nil {
 		return string(b)
 	}
-	// privileged read
-	full := append(escalator(), "cat", torrcPath)
+	full := append(Escalator(), "cat", TorrcPath)
 	out, _ := exec.Command(full[0], full[1:]...).Output()
 	return string(out)
 }
 
-func stripBlock(text string) string {
+func StripBlock(text string) string {
 	var out []string
 	skip := false
 	for _, ln := range strings.Split(text, "\n") {
@@ -77,30 +74,48 @@ func stripBlock(text string) string {
 	return strings.TrimRight(strings.Join(out, "\n"), "\n") + "\n"
 }
 
-func writeManagedBlock(lines []string) error {
-	base := stripBlock(readTorrc())
-	block := blockBegin + "\n" + strings.Join(lines, "\n") + "\n" + blockEnd
-	content := strings.TrimRight(base, "\n") + "\n\n" + block + "\n"
-
+func installTorrc(content string) error {
 	tmp, err := os.CreateTemp("", "vl-torrc-*.conf")
 	if err != nil {
 		return err
 	}
-	tmpName := tmp.Name()
+	name := tmp.Name()
 	tmp.WriteString(content)
 	tmp.Close()
-	defer os.Remove(tmpName)
-	return runPriv("", "install", "-m", "644", tmpName, torrcPath)
+	defer os.Remove(name)
+	return RunPriv("", "install", "-m", "644", name, TorrcPath)
 }
 
-func reloadTor() error {
-	if err := runPriv("", "systemctl", "reload", "tor"); err == nil {
+func WriteManagedBlock(lines []string) error {
+	base := StripBlock(ReadTorrc())
+	block := blockBegin + "\n" + strings.Join(lines, "\n") + "\n" + blockEnd
+	return installTorrc(strings.TrimRight(base, "\n") + "\n\n" + block + "\n")
+}
+
+func ClearManagedBlock() error {
+	return installTorrc(StripBlock(ReadTorrc()))
+}
+
+func ReloadTor() error {
+	if err := RunPriv("", "systemctl", "reload", "tor"); err == nil {
 		return nil
 	}
-	return runPriv("", "systemctl", "reload", "tor@default")
+	return RunPriv("", "systemctl", "reload", "tor@default")
 }
 
-func hashPassword(pw string) (string, error) {
+func StartTor() error {
+	if err := RunPriv("", "systemctl", "start", "tor"); err == nil {
+		return nil
+	}
+	return RunPriv("", "systemctl", "start", "tor@default")
+}
+
+func StopTor() error {
+	_ = RunPriv("", "systemctl", "stop", "tor@default")
+	return RunPriv("", "systemctl", "stop", "tor")
+}
+
+func HashPassword(pw string) (string, error) {
 	tor, err := exec.LookPath("tor")
 	if err != nil {
 		tor = "/usr/sbin/tor"
@@ -110,21 +125,20 @@ func hashPassword(pw string) (string, error) {
 		return "", err
 	}
 	for _, ln := range strings.Split(string(out), "\n") {
-		ln = strings.TrimSpace(ln)
-		if strings.HasPrefix(ln, "16:") {
+		if ln = strings.TrimSpace(ln); strings.HasPrefix(ln, "16:") {
 			return ln, nil
 		}
 	}
 	return "", fmt.Errorf("could not parse hashed password")
 }
 
-func randomPassword() string {
+func RandomPassword() string {
 	b := make([]byte, 24)
 	_, _ = rand.Read(b)
 	return base64.RawURLEncoding.EncodeToString(b)
 }
 
-func managedLines(c Config, hashed string, extra ...string) []string {
+func ManagedLines(c Config, hashed string, extra ...string) []string {
 	lines := []string{
 		fmt.Sprintf("SocksPort %d", c.SocksPort),
 		fmt.Sprintf("ControlPort %d", c.ControlPort),
@@ -137,12 +151,11 @@ func managedLines(c Config, hashed string, extra ...string) []string {
 	return append(lines, extra...)
 }
 
-// exitNodesLines builds valid Tor syntax: ExitNodes {us},{nl},{de}
-func exitNodesLines(csv string) []string {
+// ExitNodesLines builds valid Tor syntax: ExitNodes {us},{nl},{de}
+func ExitNodesLines(csv string) []string {
 	var codes []string
 	for _, p := range strings.Split(csv, ",") {
-		p = strings.ToLower(strings.TrimSpace(p))
-		if p != "" {
+		if p = strings.ToLower(strings.TrimSpace(p)); p != "" {
 			codes = append(codes, "{"+p+"}")
 		}
 	}

@@ -1,51 +1,71 @@
-# VUNJA LUTI — Go proof-of-concept
+# VUNJA LUTI — Go (CLI + Wails GUI)
 
-A **single static binary** (no Python, no runtime deps) that does the core of VL:
-Tor control + IP rotation, talking the Tor control protocol directly with password
-auth. Built **stdlib-only** — the SOCKS5 client and control-protocol client are
-hand-rolled, so `go build` produces one ~5 MB executable that runs anywhere.
+A Go port of VUNJA LUTI with a shared engine, a single-binary **CLI**, and a neon
+**Wails GUI** (Go backend + web frontend). Built for **zero lag** — the CLI is
+native and instant, and every GUI Tor/network call runs on a goroutine so the UI
+never blocks.
 
-It deliberately **shares state with the Python build**:
-- reads/writes the same `~/.config/vl/config.json` (incl. the control password)
-- manages the same `# >>> VUNJA-LUTI managed block >>>` fence in `/etc/tor/torrc`
+```
+go/
+├── internal/core/   shared engine (Tor control, SOCKS5, geo, torrc, wrap) — stdlib only
+├── cmd/vl/          the CLI  → static binary, no deps
+├── app.go main.go   the Wails GUI backend (bound methods, events)
+├── frontend/dist/   neon web UI (index.html, style.css, main.js) — no build step
+├── wails.json       Wails project config
+├── build-gui.sh     one-command GUI build (installs deps + wails, runs wails build)
+└── go.mod
+```
 
-So `vl doctor --fix` from either tool sets up the other.
+Interoperable with the Python build and with each other: all three share
+`~/.config/vl/config.json` (incl. the control password) and the
+`# VUNJA-LUTI managed block` in `/etc/tor/torrc`.
 
-## Build
+## CLI
 
 ```bash
 cd go
-CGO_ENABLED=0 go build -ldflags "-s -w" -o vl .
-./vl status
+CGO_ENABLED=0 go build -ldflags "-s -w" -o vl ./cmd/vl   # ~5 MB static, zero deps
+./vl status            # ~5 ms — no lag
+./vl doctor --fix      # enable password-auth control port
+./vl rotate
 ```
 
-Cross-compile (e.g. for an ARM box) — still one static file:
+Commands: `status · rotate · anoncheck · doctor [--fix] · reset · version`.
+
+## GUI (Wails)
+
+Linux needs the webkit2gtk + gtk3 dev libraries and the Wails CLI. The script does
+it all:
+
 ```bash
-GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o vl-arm64 .
+cd go
+./build-gui.sh        # installs libwebkit2gtk-4.1-dev + libgtk-3-dev + wails, then builds
+./build/bin/vunja-luti-gui
 ```
 
-## Commands
-
-```
-vl status            exit IP, country, latency, control state   (~5 ms, no lag)
-vl rotate            new Tor identity (needs `vl doctor --fix`)
-vl anoncheck         exit IP vs real IP
-vl doctor [--fix]    diagnose; --fix enables password-auth control port
-vl reset             remove VL's torrc managed block
-vl version
+Manual equivalent:
+```bash
+sudo apt install build-essential pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev
+go install github.com/wailsapp/wails/v2/cmd/wails@latest
+wails build && ./build/bin/vunja-luti-gui
 ```
 
-## Why this over Python (for distribution)
+### GUI features
+Live status card · animated **circuit map** with country flags · latency
+sparkline (canvas) · live rotation feed · **auto-rotate** · **Toolbox** (run
+hydra/ffuf/sqlmap/… through Tor, output streamed live) · exit-country filter ·
+**doctor** (one-click control-port setup) · `reset` · 5 live-switchable neon themes.
 
-| | Python build | Go PoC |
+### No-lag design
+- backend methods are bound and each runs on its own goroutine
+- status polls every 4 s asynchronously; the UI thread only paints
+- rotations + tool output arrive as **events** (`rotated`, `tool:line`) — no blocking calls
+
+## Why Go over the Python build (for distribution)
+
+| | Python | Go |
 |---|---|---|
-| Install | `.deb` pulls `python3-stem`, `requests`, `socks`, `pyqt6`… | one file, `chmod +x`, done |
-| Startup | interpreter + imports | instant (native) |
-| `vl status` | ~hundreds of ms | **~5 ms** |
-| Deps to break | several | none |
-
-## Next step: GUI
-
-The plan is a **Wails** app (Go backend + web frontend) — the neon look in
-HTML/CSS/JS, with every Tor/network call in a goroutine so the UI **never blocks**.
-This `main.go` logic becomes the Wails bound backend.
+| CLI install | `.deb` + python3-stem/requests/socks/pyqt6 | one static file |
+| `vl status` | hundreds of ms | **~5 ms** |
+| GUI | PyQt6 | Wails (web UI, smaller, snappy) |
+| Runtime deps | several | CLI: none · GUI: webkit (system lib) |

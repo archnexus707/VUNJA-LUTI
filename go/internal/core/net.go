@@ -1,7 +1,7 @@
-package main
+package core
 
-// Minimal SOCKS5 client (RFC 1928), standard library only.
-// We send the destination as a *domain name* so Tor resolves it — no DNS leak.
+// Minimal SOCKS5 client (RFC 1928) + tiny HTTP, standard library only.
+// Destinations are sent as domain names so Tor resolves them — no DNS leak.
 
 import (
 	"crypto/tls"
@@ -13,7 +13,6 @@ import (
 	"time"
 )
 
-// socksDial opens a TCP tunnel to host:port through the SOCKS5 proxy at proxyAddr.
 func socksDial(proxyAddr, host string, port uint16, timeout time.Duration) (net.Conn, error) {
 	c, err := net.DialTimeout("tcp", proxyAddr, timeout)
 	if err != nil {
@@ -21,7 +20,6 @@ func socksDial(proxyAddr, host string, port uint16, timeout time.Duration) (net.
 	}
 	_ = c.SetDeadline(time.Now().Add(timeout))
 
-	// greeting: VER=5, NMETHODS=1, METHOD=0 (no auth)
 	if _, err := c.Write([]byte{0x05, 0x01, 0x00}); err != nil {
 		c.Close()
 		return nil, err
@@ -35,8 +33,6 @@ func socksDial(proxyAddr, host string, port uint16, timeout time.Duration) (net.
 		c.Close()
 		return nil, fmt.Errorf("socks5: no acceptable auth method")
 	}
-
-	// CONNECT request with domain ATYP=3
 	if len(host) > 255 {
 		c.Close()
 		return nil, fmt.Errorf("socks5: host too long")
@@ -50,8 +46,6 @@ func socksDial(proxyAddr, host string, port uint16, timeout time.Duration) (net.
 		c.Close()
 		return nil, err
 	}
-
-	// reply: VER REP RSV ATYP ...
 	head := make([]byte, 4)
 	if _, err := io.ReadFull(c, head); err != nil {
 		c.Close()
@@ -61,7 +55,6 @@ func socksDial(proxyAddr, host string, port uint16, timeout time.Duration) (net.
 		c.Close()
 		return nil, fmt.Errorf("socks5: connect failed (code %d)", head[1])
 	}
-	// consume bound address per ATYP
 	switch head[3] {
 	case 0x01:
 		io.CopyN(io.Discard, c, 4+2)
@@ -76,7 +69,6 @@ func socksDial(proxyAddr, host string, port uint16, timeout time.Duration) (net.
 	return c, nil
 }
 
-// httpGetViaSocks performs a tiny HTTP/1.1 GET through Tor and returns the body.
 func httpGetViaSocks(proxyAddr, host, path string, useTLS bool, timeout time.Duration) (string, error) {
 	port := uint16(80)
 	if useTLS {
@@ -97,7 +89,6 @@ func httpGetViaSocks(proxyAddr, host, path string, useTLS bool, timeout time.Dur
 		}
 		rw = tc
 	}
-
 	req := fmt.Sprintf("GET %s HTTP/1.1\r\nHost: %s\r\nUser-Agent: vunja-luti\r\nConnection: close\r\n\r\n", path, host)
 	if _, err := rw.Write([]byte(req)); err != nil {
 		return "", err
@@ -113,18 +104,33 @@ func httpGetViaSocks(proxyAddr, host, path string, useTLS bool, timeout time.Dur
 	return strings.TrimSpace(stripChunking(parts[1])), nil
 }
 
-// stripChunking does a best-effort strip of obvious chunked-encoding markers for
-// the tiny single-chunk bodies we fetch (ipify/ip-api). Good enough for the PoC.
+func plainTLSGet(host, path string, timeout time.Duration) (string, error) {
+	raw, err := net.DialTimeout("tcp", host+":443", timeout)
+	if err != nil {
+		return "", err
+	}
+	defer raw.Close()
+	_ = raw.SetDeadline(time.Now().Add(timeout))
+	conn := tls.Client(raw, &tls.Config{ServerName: host})
+	if err := conn.Handshake(); err != nil {
+		return "", err
+	}
+	req := fmt.Sprintf("GET %s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n", path, host)
+	conn.Write([]byte(req))
+	buf := make([]byte, 4096)
+	n, _ := conn.Read(buf)
+	parts := strings.SplitN(string(buf[:n]), "\r\n\r\n", 2)
+	if len(parts) != 2 {
+		return "", fmt.Errorf("bad response")
+	}
+	return stripChunking(parts[1]), nil
+}
+
 func stripChunking(body string) string {
-	lines := strings.Split(body, "\r\n")
 	var out []string
-	for _, ln := range lines {
+	for _, ln := range strings.Split(body, "\r\n") {
 		t := strings.TrimSpace(ln)
-		if t == "" {
-			continue
-		}
-		// skip pure-hex chunk-size lines
-		if isHex(t) {
+		if t == "" || isHex(t) {
 			continue
 		}
 		out = append(out, ln)
