@@ -4,3 +4,7 @@ build/
 dist/
 *.egg-info/
 .vl_*
+
+# Go PoC build artifacts
+go/vl
+go/vl-*
