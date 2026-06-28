@@ -1,0 +1,17 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "vunja-luti",
+  "outputfilename": "vunja-luti-gui",
+  "frontend:install": "",
+  "frontend:build": "",
+  "wailsjsdir": "./frontend/wailsjs",
+  "author": {
+    "name": "archnexus707",
+    "email": "archnexus707@gmail.com"
+  },
+  "info": {
+    "productName": "Vunja Luti",
+    "productVersion": "6.1.0",
+    "comments": "Tor proxy + IP rotator + tool wrapper"
+  }
+}

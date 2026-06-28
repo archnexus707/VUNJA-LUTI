@@ -1,6 +1,11 @@
 __pycache__/
 *.pyc
-build/
-dist/
+/build/
+/dist/
 *.egg-info/
 .vl_*
+
+# Go
+go/vl
+go/vl-*
+go/build/bin/
