@@ -12,20 +12,27 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+from . import privexec
+
 TORRC = Path("/etc/tor/torrc")
 BEGIN = "# >>> VUNJA-LUTI managed block >>>"
 END = "# <<< VUNJA-LUTI managed block <<<"
 
 
 def _run_priv(argv: list[str], input_text: str | None = None) -> subprocess.CompletedProcess:
-    """Run a command, escalating with sudo when not already root."""
-    import os
+    """Run a command, escalating (pkexec/sudo) when not already root."""
+    return privexec.run(argv, input_text)
 
-    if os.geteuid() != 0:
-        argv = ["sudo", *argv]
-    return subprocess.run(
-        argv, input=input_text, text=True, capture_output=True, check=False
-    )
+
+def hash_password(password: str) -> str | None:
+    """Return Tor's HashedControlPassword for ``password`` (via ``tor --hash-password``)."""
+    tor = shutil.which("tor") or "/usr/sbin/tor"
+    cp = subprocess.run([tor, "--hash-password", password],
+                        text=True, capture_output=True, check=False)
+    for line in reversed(cp.stdout.splitlines()):
+        if line.startswith("16:"):
+            return line.strip()
+    return None
 
 
 def read() -> str:
@@ -84,19 +91,25 @@ def _atomic_write(content: str) -> bool:
     return cp.returncode == 0
 
 
-def ensure_control_port(control_port: int, socks_port: int) -> list[str]:
-    """Return the managed lines that enable the control port + cookie auth.
+def ensure_control_port(control_port: int, socks_port: int,
+                        hashed_password: str | None = None) -> list[str]:
+    """Return the managed lines that enable the control port.
 
-    stem needs a control port; Debian's tor ships with it disabled. We enable it
-    with cookie authentication and make the cookie group-readable so a user in the
-    ``debian-tor`` group can rotate without root.
+    stem needs a control port; Debian's tor ships with it disabled. We prefer
+    **password auth** (``HashedControlPassword``) because it works for any user
+    immediately — unlike cookie auth, which requires reading the root-owned
+    ``/run/tor/control.authcookie`` (needs debian-tor group membership + re-login).
     """
-    return [
+    lines = [
         f"SocksPort {socks_port}",
         f"ControlPort {control_port}",
-        "CookieAuthentication 1",
-        "CookieAuthFileGroupReadable 1",
     ]
+    if hashed_password:
+        lines.append(f"HashedControlPassword {hashed_password}")
+    else:
+        # fall back to group-readable cookie if no password was set up
+        lines += ["CookieAuthentication 1", "CookieAuthFileGroupReadable 1"]
+    return lines
 
 
 def exit_nodes_lines(country_csv: str) -> list[str]:

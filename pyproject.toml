@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vunja-luti"
-version = "6.0.0"
+version = "6.0.1"
 description = "Tor proxy + IP rotator + tool wrapper, with CLI and PyQt6 GUI"
 readme = "README.md"
 license = { text = "Ethical-Use-Only" }

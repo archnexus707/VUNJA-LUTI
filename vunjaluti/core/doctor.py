@@ -30,7 +30,7 @@ def _has_module(mod: str) -> bool:
 
 def run_checks(cfg: Config | None = None) -> list[Check]:
     cfg = cfg or Config.load()
-    eng = TorEngine(cfg.socks_port, cfg.control_port)
+    eng = TorEngine(cfg.socks_port, cfg.control_port, cfg.control_password)
     checks: list[Check] = []
 
     checks.append(Check("tor binary", shutil.which("tor") is not None,
@@ -38,10 +38,19 @@ def run_checks(cfg: Config | None = None) -> list[Check]:
     checks.append(Check("tor running", eng.is_running(),
                         f"SOCKS on 127.0.0.1:{cfg.socks_port}" if eng.is_running()
                         else "not listening — `vl start`"))
-    ctrl = eng.control_available()
-    checks.append(Check("control port", ctrl,
-                        f"reachable on {cfg.control_port}" if ctrl
-                        else "disabled — needed for rotation", fixable=not ctrl))
+    # verify we can actually authenticate, not just that the port is open
+    auth_ok = False
+    auth_detail = "disabled — needed for rotation"
+    if eng.control_available():
+        try:
+            eng.bootstrap_phase()  # opens + authenticates a controller
+            with eng._controller():
+                pass
+            auth_ok = True
+            auth_detail = f"authenticated on {cfg.control_port}"
+        except Exception:
+            auth_detail = "open but auth fails — needs password setup"
+    checks.append(Check("control port", auth_ok, auth_detail, fixable=not auth_ok))
     checks.append(Check("proxychains4", shutil.which("proxychains4") is not None,
                         "found" if shutil.which("proxychains4") else "missing (optional)"))
 
@@ -58,11 +67,27 @@ def run_checks(cfg: Config | None = None) -> list[Check]:
 
 
 def fix_control_port(cfg: Config | None = None) -> tuple[bool, str]:
-    """Enable Tor's control port with cookie auth via the managed torrc block."""
+    """Enable Tor's control port using password auth (works for any user).
+
+    Generates a random control password, stores the *hash* in torrc and the
+    plaintext in the user config (chmod 600), then reloads Tor. This avoids the
+    cookie-permission problem where ``/run/tor/control.authcookie`` is unreadable
+    without debian-tor group membership + re-login.
+    """
+    import secrets
+
     cfg = cfg or Config.load()
-    lines = torrc.ensure_control_port(cfg.control_port, cfg.socks_port)
+    password = secrets.token_urlsafe(24)
+    hashed = torrc.hash_password(password)
+    if not hashed:
+        return False, "could not run `tor --hash-password` (is tor installed?)"
+
+    lines = torrc.ensure_control_port(cfg.control_port, cfg.socks_port, hashed)
     if not torrc.write_block(lines):
-        return False, "failed to write /etc/tor/torrc (need sudo)"
+        return False, "failed to write /etc/tor/torrc (need sudo/pkexec)"
     if not torrc.reload_tor():
         return False, "wrote torrc but could not reload tor"
-    return True, "control port enabled; tor reloaded"
+
+    cfg.control_password = password
+    cfg.save()
+    return True, "control port enabled with password auth; tor reloaded"

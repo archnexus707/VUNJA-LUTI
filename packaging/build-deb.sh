@@ -6,7 +6,7 @@
 #==============================================================================
 set -euo pipefail
 
-VERSION="${VERSION:-6.0.0}"
+VERSION="${VERSION:-6.0.1}"
 ARCH="all"
 PKG="vunja-luti"
 HERE="$(cd "$(dirname "$0")/.." && pwd)"          # repo root

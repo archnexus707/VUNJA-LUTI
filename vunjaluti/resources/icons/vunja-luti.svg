@@ -1,31 +1,23 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#0b0e14"/>
-      <stop offset="1" stop-color="#12161f"/>
+      <stop offset="0" stop-color="#161b27"/><stop offset="1" stop-color="#0b0e14"/>
     </linearGradient>
-    <linearGradient id="neon" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#ff2a6d"/>
-      <stop offset="0.5" stop-color="#d300c5"/>
-      <stop offset="1" stop-color="#05d9e8"/>
+    <linearGradient id="border" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffe600"/><stop offset="1" stop-color="#05d9e8"/>
     </linearGradient>
-    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur stdDeviation="2.5" result="b"/>
-      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-    </filter>
+    <radialGradient id="pac" cx="0.4" cy="0.4" r="0.7">
+      <stop offset="0" stop-color="#ffe600"/><stop offset="1" stop-color="#ffb300"/>
+    </radialGradient>
   </defs>
-  <rect x="6" y="6" width="116" height="116" rx="26" fill="url(#bg)" stroke="url(#neon)" stroke-width="3"/>
-  <!-- onion rings -->
-  <g fill="none" stroke="url(#neon)" filter="url(#glow)">
-    <circle cx="64" cy="58" r="30" stroke-width="3" opacity="0.9"/>
-    <circle cx="64" cy="58" r="20" stroke-width="2.5" opacity="0.7"/>
-    <circle cx="64" cy="58" r="10" stroke-width="2" opacity="0.55"/>
+  <rect x="5" y="5" width="118" height="118" rx="26" fill="url(#bg)" stroke="url(#border)" stroke-width="3"/>
+  <!-- pellets -->
+  <g fill="#05d9e8">
+    <circle cx="110" cy="64" r="3.5"/>
+    <circle cx="92" cy="64" r="3.8"/>
+    <circle cx="76" cy="64" r="4"/>
   </g>
-  <!-- rotation arrow -->
-  <path d="M64 20 a38 38 0 1 1 -34 21" fill="none" stroke="#05d9e8" stroke-width="4"
-        stroke-linecap="round" filter="url(#glow)"/>
-  <path d="M62 14 l8 6 -8 6 z" fill="#05d9e8" filter="url(#glow)"/>
-  <!-- VL monogram -->
-  <text x="64" y="112" text-anchor="middle" font-family="monospace" font-weight="700"
-        font-size="20" fill="url(#neon)" filter="url(#glow)">VL</text>
+  <!-- pac-man: circle minus a mouth wedge (mouth opens right) -->
+  <path d="M51 64 L88 48 A40 40 0 1 0 88 80 Z" fill="url(#pac)"/>
+  <circle cx="53" cy="45" r="4.5" fill="#101018"/>
 </svg>

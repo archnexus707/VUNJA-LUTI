@@ -30,6 +30,7 @@ class Config:
     notifications: bool = True
     socks_port: int = SOCKS_PORT
     control_port: int = CONTROL_PORT
+    control_password: str = ""          # plaintext for stem; torrc stores only the hash
     font_family: str = "JetBrainsMono Nerd Font"
 
     extra: dict = field(default_factory=dict)
@@ -52,6 +53,11 @@ class Config:
         extra = data.pop("extra", {})
         data.update(extra)
         CONFIG_FILE.write_text(json.dumps(data, indent=2))
+        # config can hold the control password — keep it private
+        try:
+            os.chmod(CONFIG_FILE, 0o600)
+        except OSError:
+            pass
 
 
 def ensure_dirs() -> None:

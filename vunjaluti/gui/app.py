@@ -6,8 +6,8 @@ import sys
 import time
 from pathlib import Path
 
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QAction, QFontDatabase, QIcon
+from PyQt6.QtCore import Qt, QSize, QTimer
+from PyQt6.QtGui import QAction, QFontDatabase, QIcon, QPixmap
 from PyQt6.QtWidgets import (
     QApplication, QCheckBox, QComboBox, QFormLayout, QFrame, QHBoxLayout,
     QLabel, QLineEdit, QMainWindow, QMenu, QMessageBox, QPlainTextEdit,
@@ -38,12 +38,15 @@ class MainWindow(QMainWindow):
     def __init__(self, cfg: Config):
         super().__init__()
         self.cfg = cfg
-        self.engine = TorEngine(cfg.socks_port, cfg.control_port)
+        self.engine = TorEngine(cfg.socks_port, cfg.control_port, cfg.control_password)
         self.auto_worker: AutoRotateWorker | None = None
         self.workers: list = []   # keep refs so threads aren't GC'd
 
         self.setWindowTitle("VUNJA LUTI")
         self.resize(960, 720)
+        app_icon = RES / "icons" / "vunja-luti.png"
+        if app_icon.exists():
+            self.setWindowIcon(QIcon(str(app_icon)))
 
         root = QWidget(); root.setObjectName("root")
         self.setCentralWidget(root)
@@ -66,13 +69,21 @@ class MainWindow(QMainWindow):
         # live status polling
         self.status_worker = StatusWorker(self.engine, interval_ms=4000)
         self.status_worker.updated.connect(self.on_status)
+        self.status_worker.circuits.connect(self.circuit.set_hops)
         self.status_worker.start()
 
     # ── header ───────────────────────────────────────────────────
     def _build_header(self) -> QHBoxLayout:
         h = QHBoxLayout()
+        logo = QLabel()
+        logo_path = RES / "icons" / "vunja-luti-logo.png"
+        if logo_path.exists():
+            logo.setPixmap(QPixmap(str(logo_path)).scaled(
+                QSize(44, 44), Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation))
+            h.addWidget(logo)
         title_box = QVBoxLayout(); title_box.setSpacing(0)
-        title = QLabel("⚡ VUNJA LUTI"); title.setObjectName("title")
+        title = QLabel("VUNJA LUTI"); title.setObjectName("title")
         sub = QLabel(f"Tor Proxy · IP Rotator · Tool Wrapper — v{__version__}")
         sub.setObjectName("subtitle")
         title_box.addWidget(title); title_box.addWidget(sub)
@@ -312,7 +323,8 @@ class MainWindow(QMainWindow):
         csv = self.edit_exit.text().strip()
         self.cfg.exit_filter = csv
         self.cfg.save()
-        lines = torrc.ensure_control_port(self.cfg.control_port, self.cfg.socks_port)
+        hashed = torrc.hash_password(self.cfg.control_password) if self.cfg.control_password else None
+        lines = torrc.ensure_control_port(self.cfg.control_port, self.cfg.socks_port, hashed)
         lines += torrc.exit_nodes_lines(csv)
         if torrc.write_block(lines) and torrc.reload_tor():
             self.statusBar().showMessage(f"Exit filter applied: {csv or 'any'}")
@@ -331,6 +343,10 @@ class MainWindow(QMainWindow):
             msg += "\n\nEnable the Tor control port now?"
             if QMessageBox.question(self, "Doctor", msg) == QMessageBox.StandardButton.Yes:
                 ok, m = doctor.fix_control_port(self.cfg)
+                if ok:
+                    # reload the new password into the live engine so rotation works now
+                    self.cfg = Config.load()
+                    self.engine.control_password = self.cfg.control_password
                 QMessageBox.information(self, "Doctor", m)
         else:
             QMessageBox.information(self, "Doctor", msg)
@@ -344,6 +360,8 @@ class MainWindow(QMainWindow):
         if firewall.is_active():
             firewall.disable()
         firewall.set_ipv6(False)
+        self.cfg.control_password = ""; self.cfg.save()
+        self.engine.control_password = ""
         self.chk_ks.setChecked(False); self.chk_leak.setChecked(False)
         self.statusBar().showMessage("All VL changes reverted.")
 
@@ -415,15 +433,7 @@ class MainWindow(QMainWindow):
             self.boot_bar.setValue(st.bootstrapped)
         if st.latency_ms > 0:
             self.spark.push(st.latency_ms)
-        # update circuit map (cheap call done in worker would be better; throttle)
-        self.circuit.set_hops(self._safe_circuits())
-
-    def _safe_circuits(self):
-        try:
-            circs = self.engine.circuits()
-            return circs[0] if circs else []
-        except Exception:
-            return []
+        # circuit map is updated separately by StatusWorker.circuits (off-thread)
 
     def on_rotated(self, ip, cc, flag, ms) -> None:
         self._rotations += 1

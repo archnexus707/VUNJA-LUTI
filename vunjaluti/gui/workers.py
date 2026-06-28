@@ -8,9 +8,14 @@ from ..core.engine import TorEngine
 
 
 class StatusWorker(QThread):
-    """Polls Tor status on an interval and emits a Status dataclass."""
+    """Polls Tor status + circuits on an interval, OFF the UI thread.
+
+    Both the status network calls and the (blocking) stem circuit query run here
+    so the main event loop — and therefore the buttons — never stall.
+    """
 
     updated = pyqtSignal(object)
+    circuits = pyqtSignal(object)
 
     def __init__(self, engine: TorEngine, interval_ms: int = 4000):
         super().__init__()
@@ -25,6 +30,11 @@ class StatusWorker(QThread):
                 self.updated.emit(st)
             except Exception:
                 pass
+            try:
+                circs = self.engine.circuits()
+                self.circuits.emit(circs[0] if circs else [])
+            except Exception:
+                self.circuits.emit([])
             # sleep in small slices so stop is responsive
             slept = 0
             while slept < self.interval_ms and not self._stop:
