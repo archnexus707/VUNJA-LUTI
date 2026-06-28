@@ -5,6 +5,6 @@ PyQt6 desktop application. Tor is driven through the official ``stem`` controlle
 library for reliable circuit rotation and real bootstrap/circuit telemetry.
 """
 
-__version__ = "6.0.0"
+__version__ = "6.0.1"
 __author__ = "archnexus707"
 __all__ = ["__version__", "__author__"]

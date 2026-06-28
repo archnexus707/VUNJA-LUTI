@@ -13,13 +13,11 @@ rotation is deterministic and we get real telemetry instead of screen-scraping.
 
 from __future__ import annotations
 
-import os
 import socket
-import subprocess
 import time
 from dataclasses import dataclass
 
-from . import geo
+from . import geo, privexec
 from .config import CONTROL_PORT, SOCKS_HOST, SOCKS_PORT
 
 
@@ -57,16 +55,16 @@ def _port_open(host: str, port: int, timeout: float = 1.5) -> bool:
         return False
 
 
-def _run_priv(argv: list[str]) -> subprocess.CompletedProcess:
-    if os.geteuid() != 0:
-        argv = ["sudo", *argv]
-    return subprocess.run(argv, text=True, capture_output=True, check=False)
+def _run_priv(argv: list[str]):
+    return privexec.run(argv)
 
 
 class TorEngine:
-    def __init__(self, socks_port: int = SOCKS_PORT, control_port: int = CONTROL_PORT):
+    def __init__(self, socks_port: int = SOCKS_PORT, control_port: int = CONTROL_PORT,
+                 control_password: str = ""):
         self.socks_port = socks_port
         self.control_port = control_port
+        self.control_password = control_password
 
     # ── lifecycle ────────────────────────────────────────────────
     def is_running(self) -> bool:
@@ -116,13 +114,18 @@ class TorEngine:
         except Exception as e:
             raise TorError(
                 f"cannot reach Tor control port {self.control_port} "
-                "(run `vl doctor` to enable it)"
+                "(run `vl doctor --fix` to enable it)"
             ) from e
         try:
-            ctrl.authenticate()
+            if self.control_password:
+                ctrl.authenticate(password=self.control_password)
+            else:
+                ctrl.authenticate()
         except Exception as e:
             ctrl.close()
-            raise TorError(f"control authentication failed: {e}") from e
+            raise TorError(
+                f"control authentication failed: {e} — run `vl doctor --fix`"
+            ) from e
         return ctrl
 
     def new_identity(self) -> bool:
@@ -179,9 +182,12 @@ class TorEngine:
             if ip:
                 cc, flag = geo.country_of(ip, self.socks_port)
             ms = geo.latency_ms(self.socks_port)
+        boot = self.bootstrap_phase() if control else -1
+        if boot < 0:
+            boot = 100 if running else 0
         return Status(
             running=running,
-            bootstrapped=self.bootstrap_phase() if control else (100 if running else 0),
+            bootstrapped=boot,
             exit_ip=ip,
             country=cc,
             flag=flag,

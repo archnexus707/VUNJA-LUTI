@@ -9,7 +9,7 @@
 <h3 align="center">Tor Proxy · IP Rotator · Tool Wrapper — now with a neon GUI &amp; a one-click <code>.deb</code></h3>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-6.0.0-ff2a6d?style=flat-square">
+  <img src="https://img.shields.io/badge/version-6.0.1-ff2a6d?style=flat-square">
   <img src="https://img.shields.io/badge/platform-Kali%20%2F%20Debian-05d9e8?style=flat-square">
   <img src="https://img.shields.io/badge/interface-CLI%20%2B%20GUI-d300c5?style=flat-square">
   <img src="https://img.shields.io/badge/engine-stem%20(Tor%20control)-39ff14?style=flat-square">
@@ -51,11 +51,11 @@ Version 6 is a full rebuild: a single Python engine now powers both a **themed C
 
 ## 🚀 Install (recommended — `.deb`)
 
-Download the latest `vunja-luti_6.0.0_all.deb` from the
+Download the latest `vunja-luti_6.0.1_all.deb` from the
 [**Releases**](https://github.com/archnexus707/VUNJA-LUTI/releases) page, then:
 
 ```bash
-sudo apt install ./vunja-luti_6.0.0_all.deb
+sudo apt install ./vunja-luti_6.0.1_all.deb
 vl doctor --fix      # enable Tor control port (one time)
 ```
 
@@ -140,7 +140,7 @@ cd VUNJA-LUTI
 
 # build the .deb (no debhelper needed; uses dpkg-deb)
 bash packaging/build-deb.sh
-sudo apt install ./dist/vunja-luti_6.0.0_all.deb
+sudo apt install ./dist/vunja-luti_6.0.1_all.deb
 
 # …or run straight from the tree
 pip install -e .

@@ -14,7 +14,14 @@ from . import ui
 
 
 def _engine(cfg: Config) -> TorEngine:
-    return TorEngine(cfg.socks_port, cfg.control_port)
+    return TorEngine(cfg.socks_port, cfg.control_port, cfg.control_password)
+
+
+def _managed_lines(cfg: Config, extra: list[str] | None = None) -> list[str]:
+    """Build the torrc managed block, preserving password auth if configured."""
+    hashed = torrc.hash_password(cfg.control_password) if cfg.control_password else None
+    lines = torrc.ensure_control_port(cfg.control_port, cfg.socks_port, hashed)
+    return lines + (extra or [])
 
 
 # ── commands ─────────────────────────────────────────────────────
@@ -201,6 +208,8 @@ def cmd_reset(args, cfg, eng):
     if firewall.is_active():
         firewall.disable()
     firewall.set_ipv6(False)
+    cfg.control_password = ""
+    cfg.save()
     ui.ok("torrc managed block removed, firewall restored, IPv6 re-enabled.")
     return 0
 
@@ -370,10 +379,9 @@ def main(argv: list[str] | None = None) -> int:
 
     # apply exit filter (valid Tor syntax)
     if args.exit_filter:
-        lines = torrc.exit_nodes_lines(args.exit_filter)
-        if lines:
-            base = torrc.ensure_control_port(cfg.control_port, cfg.socks_port)
-            torrc.write_block(base + lines)
+        exit_lines = torrc.exit_nodes_lines(args.exit_filter)
+        if exit_lines:
+            torrc.write_block(_managed_lines(cfg, exit_lines))
             torrc.reload_tor()
             ui.say(f"Exit filter applied: {args.exit_filter}")
 

@@ -7,10 +7,9 @@ and could lock the user out. Here we snapshot the full ruleset with
 
 from __future__ import annotations
 
-import os
-import subprocess
 from pathlib import Path
 
+from . import privexec
 from .config import CONFIG_DIR
 
 V4_BACKUP = CONFIG_DIR / "iptables.v4.bak"
@@ -20,19 +19,8 @@ STATE = CONFIG_DIR / "killswitch.state"
 TOR_UID_USERS = ("debian-tor", "tor")
 
 
-def _run(argv: list[str], **kw) -> subprocess.CompletedProcess:
-    if os.geteuid() != 0:
-        argv = ["sudo", *argv]
-    return subprocess.run(argv, text=True, capture_output=True, check=False, **kw)
-
-
-def _require_root() -> None:
-    # sudo is fine; we just need to be able to escalate
-    if os.geteuid() != 0 and subprocess.run(
-        ["sudo", "-n", "true"], capture_output=True
-    ).returncode != 0:
-        # not passwordless — caller's sudo prompt will still appear, that's ok
-        pass
+def _run(argv: list[str]):
+    return privexec.run(argv)
 
 
 def _tor_uid() -> str | None:
@@ -53,7 +41,6 @@ def is_active() -> bool:
 
 def enable(socks_port: int = 9050) -> tuple[bool, str]:
     """Block all non-Tor egress. Returns (ok, message)."""
-    _require_root()
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
 
     # snapshot current rules
@@ -98,7 +85,6 @@ def enable(socks_port: int = 9050) -> tuple[bool, str]:
 
 def disable() -> tuple[bool, str]:
     """Restore the exact ruleset captured at enable time."""
-    _require_root()
     restored = False
     if V4_BACKUP.exists():
         cp = _run(["sh", "-c", f"iptables-restore < {V4_BACKUP}"])
