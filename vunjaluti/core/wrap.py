@@ -48,9 +48,21 @@ def build_proxychains_conf(ports: list[int] | None = None, dest: str | None = No
 
 
 def to_argv(command) -> list[str]:
-    """Accept either a list (used as-is) or a string (parsed once, safely)."""
+    """Accept either a list (used as-is) or a string (parsed once, safely).
+
+    Also handles the common case where the whole command arrives as a single
+    quoted element, e.g. ``vl wrap "nmap -sT target"`` yields ``["nmap -sT
+    target"]`` from argparse. If a one-element list holds a value with spaces
+    and that first token is not an existing executable, re-split it so
+    proxychains receives ``nmap`` + args instead of one bogus filename.
+    """
     if isinstance(command, (list, tuple)):
-        return list(command)
+        items = list(command)
+        if len(items) == 1 and isinstance(items[0], str) and " " in items[0]:
+            first = shlex.split(items[0])[0] if items[0].strip() else ""
+            if first and shutil.which(first) is not None:
+                return shlex.split(items[0])
+        return items
     return shlex.split(command)
 
 
