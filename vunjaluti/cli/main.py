@@ -70,7 +70,16 @@ def cmd_start(args, cfg, eng):
             break
         time.sleep(0.5)
     print()
-    if not eng.control_available():
+    if not eng.control_available() and cfg.rotate_interval > 0:
+        ui.say("Control port closed — enabling it so rotation works…")
+        from ..core import doctor
+        ok, msg = doctor.fix_control_port(cfg)
+        if ok:
+            eng = _engine(cfg)  # rebuild with the freshly written control password
+            ui.ok(msg)
+        else:
+            ui.warn(f"{msg} — rotation disabled (run: vl doctor --fix manually)")
+    elif not eng.control_available():
         ui.warn("Control port closed — rotation disabled. Run: vl doctor --fix")
     ui.ok("Tor is up. Rotating every %ss (Ctrl+C to stop)." % cfg.rotate_interval)
     print()
