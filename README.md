@@ -9,7 +9,7 @@
 <h3 align="center">Tor Proxy · IP Rotator · Tool Wrapper — neon GUI, themed CLI, two editions (Python &amp; Go)</h3>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-6.2.0-ff2a6d?style=flat-square">
+  <img src="https://img.shields.io/badge/version-6.2.1-ff2a6d?style=flat-square">
   <img src="https://img.shields.io/badge/platform-Kali%20%2F%20Debian-05d9e8?style=flat-square">
   <img src="https://img.shields.io/badge/interface-CLI%20%2B%20GUI-d300c5?style=flat-square">
   <img src="https://img.shields.io/badge/editions-Python%20%2B%20Go-39ff14?style=flat-square">
@@ -61,7 +61,7 @@ Grab assets from the [**latest release**](https://github.com/archnexus707/VUNJA-
 ### 🐍 Python edition — `.deb` (GUI + CLI)
 
 ```bash
-sudo apt install ./vunja-luti_6.2.0_all.deb
+sudo apt install ./vunja-luti_6.2.1_all.deb
 vl doctor --fix      # enable Tor control port (one time)
 vunja-luti-gui       # GUI (or launch "Vunja Luti" from the app menu)
 vl start             # CLI rotation loop
@@ -166,7 +166,7 @@ cd VUNJA-LUTI
 **Python edition:**
 ```bash
 bash packaging/build-deb.sh                 # build the .deb (uses dpkg-deb)
-sudo apt install ./dist/vunja-luti_6.2.0_all.deb
+sudo apt install ./dist/vunja-luti_6.2.1_all.deb
 # …or run straight from the tree:
 pip install -e . && vl status
 ```
