@@ -42,9 +42,10 @@ same `~/.config/vl/config.json` and `/etc/tor/torrc`:
 | | |
 |---|---|
 | 🖥️ **Desktop GUI** | Live status, animated **circuit map** with country flags, latency sparkline, live rotation feed, system-tray controls + notifications. |
-| ⌨️ **Themed CLI** | `vl start / status / rotate / wrap / toolbox / monitor / doctor`, 9 colour themes, truecolour output. |
+| ⌨️ **Themed CLI** | `vl start / status / rotate / wrap / browser / toolbox / monitor / doctor`, 9 colour themes, truecolour output. |
 | 🔁 **Real rotation** | Identity changes via the Tor **control port** (`stem`) — deterministic, not screen-scraping. |
 | 🧰 **Tool wrapper** | Push hydra / ffuf / gobuster / sqlmap / nmap / nikto / wpscan / curl through Tor, with auto IP rotation. |
+| 🦊 **Anon browser** | `vl browser` builds and launches a hardened **Firefox** profile routed through Tor, with WebRTC, geolocation and prefetch disabled so the browser cannot leak your real IP. |
 | 🛡️ **Kill-switch** | iptables egress lock with **full backup/restore** — never nukes your existing rules. |
 | 🚱 **Leak-guard** | Disables IPv6 + routes DNS through Tor to stop DNS/IPv6 leaks. |
 | 🌍 **Exit filter** | Pin exit countries (`us,nl,de`) using **valid** Tor syntax. |
