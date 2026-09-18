@@ -3,13 +3,13 @@
 </p>
 
 <h1 align="center">
-  <img src="assets/icon.png" width="34" align="top" alt=""> &nbsp;VUNJA LUTI <code>v6.1</code>
+  <img src="assets/icon.png" width="34" align="top" alt=""> &nbsp;VUNJA LUTI <code>v6.2</code>
 </h1>
 
 <h3 align="center">Tor Proxy · IP Rotator · Tool Wrapper — neon GUI, themed CLI, two editions (Python &amp; Go)</h3>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-6.1.0-ff2a6d?style=flat-square">
+  <img src="https://img.shields.io/badge/version-6.2.0-ff2a6d?style=flat-square">
   <img src="https://img.shields.io/badge/platform-Kali%20%2F%20Debian-05d9e8?style=flat-square">
   <img src="https://img.shields.io/badge/interface-CLI%20%2B%20GUI-d300c5?style=flat-square">
   <img src="https://img.shields.io/badge/editions-Python%20%2B%20Go-39ff14?style=flat-square">
@@ -61,7 +61,7 @@ Grab assets from the [**latest release**](https://github.com/archnexus707/VUNJA-
 ### 🐍 Python edition — `.deb` (GUI + CLI)
 
 ```bash
-sudo apt install ./vunja-luti_6.0.1_all.deb
+sudo apt install ./vunja-luti_6.2.0_all.deb
 vl doctor --fix      # enable Tor control port (one time)
 vunja-luti-gui       # GUI (or launch "Vunja Luti" from the app menu)
 vl start             # CLI rotation loop
@@ -112,12 +112,17 @@ vl anoncheck                   # confirm exit IP ≠ real IP
 vl monitor                     # live circuit-health watch + auto-recovery
 vl --theme matrix status       # any of 9 themes
 
-# route any tool through Tor (quotes & flags are preserved safely)
-vl --rotate 30 wrap -- sqlmap -u 'http://target/page?id=1' --batch
-vl wrap -- nmap -sT -Pn -p 80,443 target.com
+# route any tool through Tor (wrap the whole command in quotes)
+vl --rotate 30 wrap "sqlmap -u 'http://target/page?id=1' --batch"
+vl wrap "nmap -sT -Pn -p 80,443 target.com"
+# note: use nmap -sT and --system-dns (or scan an IP) so name lookups go through Tor
+
+# anonymous browser (hardened Firefox routed through Tor)
+vl browser                         # build the profile and launch it
+vl browser --create-only           # write the profile without launching
 
 # security
-sudo vl --killswitch start         # block all non-Tor egress (auto-restored on stop)
+sudo vl --killswitch start         # block all non-Tor egress (force-restored on stop/reset)
 sudo vl --leak-guard start         # disable IPv6 + DNS-through-Tor
 vl --exit-filter us,nl,de status   # pin exit countries
 vl reset                           # revert every torrc / firewall change VL made
@@ -161,7 +166,7 @@ cd VUNJA-LUTI
 **Python edition:**
 ```bash
 bash packaging/build-deb.sh                 # build the .deb (uses dpkg-deb)
-sudo apt install ./dist/vunja-luti_6.0.1_all.deb
+sudo apt install ./dist/vunja-luti_6.2.0_all.deb
 # …or run straight from the tree:
 pip install -e . && vl status
 ```
@@ -194,7 +199,7 @@ CGO_ENABLED=0 go build -ldflags "-s -w" -o vl ./cmd/vl   # static CLI, no deps
 
 ```
 vunjaluti/        🐍 Python edition
-├── core/         engine·geo·firewall·torrc·wrap·sessions·doctor·config
+├── core/         engine·geo·firewall·torrc·wrap·browser·sessions·doctor·config
 ├── cli/          vl / vunja-luti  (argparse, themed)
 ├── gui/          PyQt6 app · widgets · workers · neon QSS
 └── resources/    icons + fonts
