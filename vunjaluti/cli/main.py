@@ -309,6 +309,23 @@ def cmd_gui(args, cfg, eng):
     return gui_main()
 
 
+def cmd_browser(args, cfg, eng):
+    from ..core import browser
+    ui.banner(cfg.theme)
+    if getattr(args, "create_only", False):
+        path = browser.create_profile(socks_port=cfg.socks_port)
+        ui.ok(f"hardened Firefox profile written: {path}")
+        print(f"  {ui.dim('Launch it: firefox --profile ' + str(path) + ' --no-remote')}")
+        return 0
+    if not eng.is_running():
+        ui.warn("Tor is not running — the browser will have no proxy. Start it first: vl start")
+    ok, msg = browser.launch(socks_port=cfg.socks_port)
+    (ui.ok if ok else ui.err)(msg)
+    if ok:
+        print(f"  {ui.dim('Verify at https://check.torproject.org')}")
+    return 0 if ok else 1
+
+
 # ── argument parser ──────────────────────────────────────────────
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
@@ -337,11 +354,15 @@ def build_parser() -> argparse.ArgumentParser:
         ("doctor", cmd_doctor, "diagnose & repair the setup"),
         ("reset", cmd_reset, "revert all VL torrc/firewall changes"),
         ("gui", cmd_gui, "launch the desktop GUI"),
+        ("browser", cmd_browser, "launch a hardened Tor Firefox profile"),
     ]:
         sp = sub.add_parser(name, help=help_)
         sp.set_defaults(func=fn)
         if name == "doctor":
             sp.add_argument("--fix", action="store_true", help="auto-fix issues")
+        if name == "browser":
+            sp.add_argument("--create-only", action="store_true",
+                            help="write the profile but do not launch Firefox")
 
     wp = sub.add_parser("wrap", help="route a command through Tor")
     wp.add_argument("command", nargs=argparse.REMAINDER,
